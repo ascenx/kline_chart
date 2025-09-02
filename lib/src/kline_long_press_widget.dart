@@ -14,10 +14,10 @@ class KlineLongPressWidget extends StatelessWidget {
     double itemW = KLineController.shared.itemWidth;
     double spacing = KLineController.shared.spacing;
     double itemSpacingWidth = itemW + spacing;
-    int index = (offset.dx / itemSpacingWidth).ceil();
+    int index = (offset.dx / itemSpacingWidth).ceil() - 1;
     double indexOffset = beginIdx - beginIdx.ceil();
     double slideOffset = -indexOffset * itemSpacingWidth;
-    double itemOffsetX = index * itemSpacingWidth + itemW * 0.5 + slideOffset;
+    double itemOffsetX = index * itemSpacingWidth - itemW * 0.5 + slideOffset;
     return Offset(itemOffsetX, offset.dy);
   }
 
@@ -47,7 +47,7 @@ class KLineLongPressPainter extends CustomPainter {
 
   final _linePaint = Paint()
     ..style = PaintingStyle.stroke
-    ..color = Colors.blueGrey.withOpacity(0.8);
+    ..color = Colors.blueGrey.withValues(alpha: 0.8);
 
   // draw kline
 

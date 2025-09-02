@@ -50,6 +50,7 @@ class _KLineViewState extends State<KLineView> {
         }
         _beginIdx = nowIdx;
     }
+    debugPrint('beginIdx:$_beginIdx');
     // if (_lastBeginIdx == _beginIdx) return;
     setState(() {
       // _lastBeginIdx = _beginIdx;

@@ -27,7 +27,7 @@ class KlineInfoWidget extends StatelessWidget {
                 decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(ctr.infoWidgetBorderRadius),
                     border: ctr.infoWidgetBorder,
-                    color: Colors.white.withOpacity(0.8)),
+                    color: Colors.white.withValues(alpha: 0.8)),
                 child: CustomPaint(
                   size: Size(ctr.infoWidgetMaxWidth ?? 120, 110),
                   painter: KLineLongPressInfoPainter(data, beginIdx, offset),

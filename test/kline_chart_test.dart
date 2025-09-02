@@ -1,4 +1,3 @@
-import 'package:kline_chart/kline_chart.dart';
 import 'package:test/test.dart';
 
 void main() {

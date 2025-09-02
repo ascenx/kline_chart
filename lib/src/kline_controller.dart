@@ -78,7 +78,7 @@ class KLineController {
   EdgeInsets infoWidgetMargin = const EdgeInsets.only(left: 8, top: 10);
   EdgeInsets infoWidgetPadding = const EdgeInsets.all(4);
   double infoWidgetBorderRadius = 4;
-  Border infoWidgetBorder = Border.all(color: Colors.blueGrey.withOpacity(0.5), width: 0.5);
+  Border infoWidgetBorder = Border.all(color: Colors.blueGrey.withValues(alpha: 0.5), width: 0.5);
 
   var longPressOffset = LongPressOffset(Offset.zero);
 

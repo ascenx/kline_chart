@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -43,7 +42,7 @@ class KLinePainter extends CustomPainter {
 
   final _rulerPaint = Paint()
     ..style = PaintingStyle.stroke
-    ..color = Colors.blueGrey.withOpacity(0.2);
+    ..color = Colors.blueGrey.withValues(alpha: 0.2);
 
   final _currentPricePaint = Paint()
     ..style = PaintingStyle.stroke
@@ -113,7 +112,7 @@ class KLinePainter extends CustomPainter {
       Offset(0, mainHeight),
       <Color>[
         Colors.lightBlueAccent,
-        Colors.lightBlueAccent.withOpacity(0.0),
+        Colors.lightBlueAccent.withValues(alpha: 0.0),
       ],
     );
 

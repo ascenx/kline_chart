@@ -34,9 +34,6 @@ class IndicatorDataHandler {
         // start from the index equals period
         double startIdx = j >= period - 1 ? j - period + 1 : 0;
 
-        int startIndex = (startIdx - 1).ceil();
-        // startIndex = startIndex < 0 ? 0 : startIndex;
-
         List<KLineData> sublist =
             klineData.sublist(startIdx.ceil(), (startIdx + period).ceil());
         if (sublist.isEmpty) {

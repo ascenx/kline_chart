@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:kline_chart/kline_chart.dart';
@@ -37,8 +36,8 @@ class _MyHomePageState extends State<MyHomePage> {
   initState() {
     super.initState();
 
-    _loadJson().then((value) {
-      KLineController.shared.data = value;
+    _loadJson().then((jsonData) {
+      KLineController.shared.data = jsonData;
       setState(() {});
     });
   }
