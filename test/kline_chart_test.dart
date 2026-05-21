@@ -60,12 +60,90 @@ void main() {
     });
   });
 
+  group('KLineController.zoomForScale', () {
+    test('keeps the focal candle under the gesture focal point', () {
+      final result = KLineController.zoomForScale(
+        startBeginIndex: 10,
+        startItemCount: 30,
+        scale: 2,
+        startFocalDx: 100,
+        currentFocalDx: 100,
+        viewportWidth: 300,
+        dataLength: 100,
+        minItemCount: 7,
+        maxItemCount: 39,
+      );
+
+      final focalIndexAfterZoom =
+          result.beginIndex + result.itemCount * 100 / 300;
+
+      expect(result.itemCount, 15);
+      expect(focalIndexAfterZoom, closeTo(20, 0.000001));
+    });
+
+    test('tracks the focal point when it moves during a pinch gesture', () {
+      final result = KLineController.zoomForScale(
+        startBeginIndex: 10,
+        startItemCount: 30,
+        scale: 2,
+        startFocalDx: 100,
+        currentFocalDx: 150,
+        viewportWidth: 300,
+        dataLength: 100,
+        minItemCount: 7,
+        maxItemCount: 39,
+      );
+
+      final focalIndexAfterZoom =
+          result.beginIndex + result.itemCount * 150 / 300;
+
+      expect(focalIndexAfterZoom, closeTo(20, 0.000001));
+    });
+
+    test('clamps zoom begin index at the data edges', () {
+      final result = KLineController.zoomForScale(
+        startBeginIndex: 80,
+        startItemCount: 30,
+        scale: 2,
+        startFocalDx: 300,
+        currentFocalDx: 300,
+        viewportWidth: 300,
+        dataLength: 100,
+        minItemCount: 7,
+        maxItemCount: 39,
+      );
+
+      expect(result.itemCount, 15);
+      expect(result.beginIndex, 85);
+    });
+  });
+
   group('KLinePainter.shouldRepaint', () {
     test('repaints when begin index changes', () {
       final oldPainter = KLinePainter(const [], 10);
       final newPainter = KLinePainter(const [], 11);
 
       expect(newPainter.shouldRepaint(oldPainter), isTrue);
+    });
+
+    testWidgets('renders fractional trailing zoom window without overflow',
+        (tester) async {
+      final data = _buildKLineData(100);
+      const itemCount = 17.647058823529413;
+      KLineController.shared.itemCount = itemCount;
+
+      await tester.pumpWidget(MaterialApp(
+        home: SizedBox(
+          width: 300,
+          height: 240,
+          child: CustomPaint(
+            painter: KLinePainter(data, data.length - itemCount),
+          ),
+        ),
+      ));
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
     });
   });
 

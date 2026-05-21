@@ -131,7 +131,9 @@ class KLinePainter extends CustomPainter {
       // debugPrint('debug: beginIdx($beginIdx) >= klineData.length(${klineData.length}) return');
       return;
     }
-    KLineData beginData = klineData[beginIdx.ceil()];
+    final beginDataIndex =
+        beginIdx.ceil().clamp(0, klineData.length - 1).toInt();
+    KLineData beginData = klineData[beginDataIndex];
     double highest = beginData.high;
     double lowest = beginData.low;
 
@@ -140,9 +142,10 @@ class KLinePainter extends CustomPainter {
     double highestIdx = beginIdx, lowestIdx = beginIdx;
 
     for (var i = beginIdx - 1; i < beginIdx + itemCount; ++i) {
-      if (i >= klineData.length) continue;
+      if (i >= klineData.length) break;
       int idx = i.ceil();
       idx = idx < 0 ? 0 : idx;
+      if (idx >= klineData.length) break;
       final data = klineData[idx];
       double high = data.high;
       double low = data.low;
@@ -249,9 +252,10 @@ class KLinePainter extends CustomPainter {
     bool hasTimeLineStart = false;
 
     for (var i = beginIdx - 1; i < beginIdx + itemCount; ++i) {
-      if (i >= klineData.length) continue;
+      if (i >= klineData.length) break;
       int idx = i.ceil();
       idx = idx < 0 ? 0 : idx;
+      if (idx >= klineData.length) break;
       KLineData data = klineData[idx];
 
       double open = data.open;

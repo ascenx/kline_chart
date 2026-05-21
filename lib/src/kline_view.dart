@@ -5,6 +5,7 @@ import './kline_long_press_widget.dart';
 import './kline_painter.dart';
 
 const double _scrollIndexTolerance = 0.000001;
+const double _scrollOffsetTolerance = 0.01;
 
 class KLineView extends StatefulWidget {
   KLineView({super.key});
@@ -19,8 +20,13 @@ class _KLineViewState extends State<KLineView> {
   bool _hasInitScrollController = false;
   double _beginIdx = -1.0;
 
-  double _zoomFactor = 1.0;
-  double _currentScale = 1.0;
+  double _zoomStartBeginIdx = 0.0;
+  double _zoomStartItemCount = 0.0;
+  double _zoomStartFocalDx = 0.0;
+  double _viewportWidth = 0.0;
+  double _pendingScrollBeginIdx = 0.0;
+  double _pendingScrollItemCount = 0.0;
+  bool _hasPendingScrollSync = false;
 
   // int _dataLength = 0;
 
@@ -79,39 +85,56 @@ class _KLineViewState extends State<KLineView> {
   // }
 
   void _klineDidZoom(ScaleUpdateDetails details) {
-    if (details.pointerCount != 2) return;
+    if (details.pointerCount != 2 || _viewportWidth <= 0) return;
 
-    double scaleDelta = details.scale / _zoomFactor;
-    _zoomFactor = details.scale;
+    final result = KLineController.zoomForScale(
+      startBeginIndex: _zoomStartBeginIdx,
+      startItemCount: _zoomStartItemCount,
+      scale: details.scale,
+      startFocalDx: _zoomStartFocalDx,
+      currentFocalDx: details.localFocalPoint.dx,
+      viewportWidth: _viewportWidth,
+      dataLength: KLineController.shared.data.length,
+      minItemCount: KLineController.shared.minCount,
+      maxItemCount: KLineController.shared.maxCount,
+    );
 
-    double newScale = _currentScale * scaleDelta;
-
-    if (newScale > 1.5) {
-      _currentScale = 1.5;
-    } else if (newScale < 0.5) {
-      _currentScale = 0.5;
-    } else {
-      _currentScale = newScale;
+    if ((_beginIdx - result.beginIndex).abs() < _scrollIndexTolerance &&
+        (KLineController.shared.itemCount - result.itemCount).abs() <
+            _scrollIndexTolerance) {
+      return;
     }
 
-    double dataLength = KLineController.shared.data.length.toDouble();
-    double count =
-        KLineController.shared.itemCount + ((1 - _currentScale) * 4).ceil();
-    double maxCount = dataLength > KLineController.shared.maxCount
-        ? KLineController.shared.maxCount
-        : dataLength;
-
-    count = count > maxCount ? maxCount : count;
-    count = count < KLineController.shared.minCount
-        ? KLineController.shared.minCount
-        : count;
-
     setState(() {
-      _beginIdx = _beginIdx + (KLineController.shared.itemCount - count) / 2;
-      if (count + _beginIdx >= dataLength) {
-        _beginIdx = (dataLength - count).toDouble();
+      _beginIdx = result.beginIndex;
+      KLineController.shared.itemCount = result.itemCount;
+    });
+    _syncScrollOffset(result.beginIndex, result.itemCount);
+  }
+
+  void _syncScrollOffset(double beginIdx, double itemCount) {
+    final controller = _klineScrollCtr;
+    if (controller == null || itemCount <= 0 || _viewportWidth <= 0) return;
+
+    _pendingScrollBeginIdx = beginIdx;
+    _pendingScrollItemCount = itemCount;
+    if (_hasPendingScrollSync) return;
+    _hasPendingScrollSync = true;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _hasPendingScrollSync = false;
+      if (!mounted || !controller.hasClients) return;
+
+      final targetOffset =
+          _pendingScrollBeginIdx * _viewportWidth / _pendingScrollItemCount;
+      final clampedOffset = targetOffset
+          .clamp(controller.position.minScrollExtent,
+              controller.position.maxScrollExtent)
+          .toDouble();
+      if ((controller.offset - clampedOffset).abs() < _scrollOffsetTolerance) {
+        return;
       }
-      KLineController.shared.itemCount = count;
+      controller.jumpTo(clampedOffset);
     });
   }
 
@@ -134,6 +157,7 @@ class _KLineViewState extends State<KLineView> {
         child: LayoutBuilder(builder: (ctx, constraints) {
           double containerW = constraints.maxWidth;
           double containerH = constraints.maxHeight;
+          _viewportWidth = containerW;
 
           double itemCount = KLineController.shared.itemCount;
           double itemW = KLineController.getItemWidth(containerW);
@@ -155,7 +179,9 @@ class _KLineViewState extends State<KLineView> {
               size: Size(containerW, containerH),
               child: GestureDetector(
                 onScaleStart: (details) {
-                  _zoomFactor = 1.0;
+                  _zoomStartBeginIdx = _beginIdx < 0 ? 0.0 : _beginIdx;
+                  _zoomStartItemCount = KLineController.shared.itemCount;
+                  _zoomStartFocalDx = details.localFocalPoint.dx;
                 },
                 onScaleUpdate: (details) => _klineDidZoom(details),
                 onLongPressStart: (details) =>

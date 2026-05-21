@@ -287,6 +287,8 @@ class IndicatorDataHandler {
 
       int endIndex = _visibleEnd(klineData, beginIdx);
       for (var i = beginIdx; i < endIndex; ++i) {
+        final dataIndex = i.ceil();
+        if (dataIndex >= klineData.length) break;
         double end = i + 1;
         double start = i < period ? 0 : i - period;
         List<KLineData> sublist = klineData.sublist(start.ceil(), end.ceil());
@@ -299,7 +301,9 @@ class IndicatorDataHandler {
         }
         double wr = highest == lowest
             ? 0.0
-            : (highest - klineData[i.ceil()].close) / (highest - lowest) * 100;
+            : (highest - klineData[dataIndex < 0 ? 0 : dataIndex].close) /
+                (highest - lowest) *
+                100;
         if (wr < min || min == 0.0) min = wr;
         if (wr > max || max == 0.0) max = wr;
         wrList.add(wr);

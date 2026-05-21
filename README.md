@@ -89,8 +89,8 @@ class _MyHomePageState extends State<MyHomePage> {
 - ~~current price~~
 - ~~Time Chart~~
 - ~~Publish to pub.dev~~
+- ~~Improve scale gesture~~
 
-- Improve scale gesture
 - MACD sub indicator
 - RSI sub indicator
 - SAR  indicator

@@ -42,6 +42,16 @@ class LongPressOffset extends ValueNotifier<Offset> {
   }
 }
 
+class KLineZoomResult {
+  final double beginIndex;
+  final double itemCount;
+
+  const KLineZoomResult({
+    required this.beginIndex,
+    required this.itemCount,
+  });
+}
+
 class KLineController {
 
   List<KLineData> data = [];
@@ -154,6 +164,40 @@ class KLineController {
 
     final maxBeginIndex = max(0.0, dataLength - itemCount);
     return rawBeginIndex.clamp(0.0, maxBeginIndex).toDouble();
+  }
+
+  static KLineZoomResult zoomForScale({
+    required double startBeginIndex,
+    required double startItemCount,
+    required double scale,
+    required double startFocalDx,
+    required double currentFocalDx,
+    required double viewportWidth,
+    required int dataLength,
+    required double minItemCount,
+    required double maxItemCount,
+  }) {
+    if (dataLength <= 0 || startItemCount <= 0 || viewportWidth <= 0) {
+      return const KLineZoomResult(beginIndex: 0.0, itemCount: 0.0);
+    }
+
+    final safeScale = scale > 0 ? scale : 1.0;
+    final maxVisibleCount = min(maxItemCount, dataLength.toDouble());
+    final minVisibleCount = min(minItemCount, maxVisibleCount);
+    final nextItemCount = (startItemCount / safeScale)
+        .clamp(minVisibleCount, maxVisibleCount)
+        .toDouble();
+
+    final startFocalRatio = (startFocalDx / viewportWidth).clamp(0.0, 1.0);
+    final currentFocalRatio = (currentFocalDx / viewportWidth).clamp(0.0, 1.0);
+    final focalDataIndex = startBeginIndex + startItemCount * startFocalRatio;
+    final rawBeginIndex = focalDataIndex - nextItemCount * currentFocalRatio;
+    final maxBeginIndex = max(0.0, dataLength - nextItemCount);
+
+    return KLineZoomResult(
+      beginIndex: rawBeginIndex.clamp(0.0, maxBeginIndex).toDouble(),
+      itemCount: nextItemCount,
+    );
   }
 
   // singleton

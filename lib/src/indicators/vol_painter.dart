@@ -59,7 +59,9 @@ class VolPainter {
     double endIndex = beginIdx + itemCount;
     if (endIndex > klineData.length) endIndex = klineData.length.toDouble();
     for (var i = beginIdx; i < endIndex; ++i) {
-      KLineData data = klineData[i.ceil()];
+      final dataIndex = i.ceil();
+      if (dataIndex >= klineData.length) break;
+      KLineData data = klineData[dataIndex < 0 ? 0 : dataIndex];
 
       double open = data.open;
       double close = data.close;
