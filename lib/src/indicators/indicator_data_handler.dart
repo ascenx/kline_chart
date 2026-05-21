@@ -1,11 +1,16 @@
 import 'dart:math';
 
-import 'package:flutter/cupertino.dart';
 import '../indicators/indicator_result.dart';
 import '../kline_controller.dart';
 import '../kline_data.dart';
 
 class IndicatorDataHandler {
+  static int _visibleStart(double beginIdx) => max(0, beginIdx.ceil());
+
+  static int _visibleEnd(List<KLineData> klineData, double beginIdx) {
+    double itemCount = KLineController.shared.itemCount;
+    return min(klineData.length, (beginIdx + itemCount).ceil());
+  }
 
   static IndicatorResult ma(
       List<KLineData> klineData, List<int> periods, double beginIdx,
@@ -26,22 +31,14 @@ class IndicatorDataHandler {
           maList.add(-1);
           continue;
         }
-        if (j.ceil() >= klineData.length) {
-          debugPrint('debug:range error');
-          continue;
-        }
+        if (j.ceil() >= klineData.length) break;
 
         // start from the index equals period
         double startIdx = j >= period - 1 ? j - period + 1 : 0;
 
-        debugPrint('startIdx:$startIdx');
-
         List<KLineData> sublist =
             klineData.sublist(startIdx.ceil(), (startIdx + period).ceil());
-        if (sublist.isEmpty) {
-          debugPrint('debug:sublist.isEmpty');
-          continue;
-        }
+        if (sublist.isEmpty) continue;
         double sum = 0.0;
         if (isVol) {
           sum = sublist.fold(0.0, (pre, e) => pre + e.volume);
@@ -103,9 +100,9 @@ class IndicatorDataHandler {
         emaList.add(emaValue);
       }
 
-      double start = beginIdx > 0 ? beginIdx : 0;
-      List<double> subList =
-          emaList.sublist(start.ceil(), (start + itemCount).ceil());
+      int start = _visibleStart(beginIdx);
+      int end = _visibleEnd(klineData, beginIdx);
+      List<double> subList = start < end ? emaList.sublist(start, end) : [];
       emaData.add(subList);
     }
     return IndicatorResult(emaData, max, min);
@@ -148,11 +145,12 @@ class IndicatorDataHandler {
       dnList.add(dn);
     }
 
-    double itemCount = KLineController.shared.itemCount;
-    double start = beginIdx > 0 ? beginIdx : 0;
-    upList = upList.sublist(start.ceil(), (start + itemCount).ceil());
-    mbList = mbList.sublist(start.ceil(), (start + itemCount).ceil());
-    dnList = dnList.sublist(start.ceil(), (start + itemCount).ceil());
+    int start = _visibleStart(beginIdx);
+    int end = _visibleEnd(klineData, beginIdx);
+    upList = start < end ? upList.sublist(start, end) : [];
+    mbList = start < end ? mbList.sublist(start, end) : [];
+    dnList = start < end ? dnList.sublist(start, end) : [];
+    if (dnList.isEmpty) return IndicatorResult.empty;
 
     double maxValue = 0.0, minValue = dnList.first;
     for (int i = 0; i < upList.length; ++i) {
@@ -183,7 +181,6 @@ class IndicatorDataHandler {
 
   static void calculateMACD(
       List<double> values, int shortPeriod, int longPeriod, int signalPeriod) {
-
     List<double> shortEMA = [];
     for (int i = longPeriod - shortPeriod; i < values.length; i++) {
       List<double> subset = values.sublist(i - shortPeriod + 1, i + 1);
@@ -214,7 +211,6 @@ class IndicatorDataHandler {
     for (int i = 0; i < dif.length; i++) {
       macd.add(2 * (dif[i] - dea[i]));
     }
-
   }
 
   static IndicatorResult kdj(
@@ -280,16 +276,17 @@ class IndicatorDataHandler {
     return IndicatorResult([kValues, dValues, jValues], maxValue, minValue);
   }
 
-  static IndicatorResult wr(List<KLineData> klineData, List<int> periods, double beginIdx) {
+  static IndicatorResult wr(
+      List<KLineData> klineData, List<int> periods, double beginIdx) {
     if (klineData.isEmpty || periods.isEmpty) return IndicatorResult.empty;
     List<List<double>> dataList = [];
     double max = 0.0, min = 0.0;
-    double itemCount = KLineController.shared.itemCount;
     for (var idx = 0; idx < periods.length; ++idx) {
       int period = periods[idx];
       List<double> wrList = [];
 
-      for (var i = beginIdx; i < beginIdx + itemCount; ++i) {
+      int endIndex = _visibleEnd(klineData, beginIdx);
+      for (var i = beginIdx; i < endIndex; ++i) {
         double end = i + 1;
         double start = i < period ? 0 : i - period;
         List<KLineData> sublist = klineData.sublist(start.ceil(), end.ceil());
@@ -300,8 +297,9 @@ class IndicatorDataHandler {
           if (subData.low < lowest) lowest = subData.low;
           if (subData.high > highest) highest = subData.high;
         }
-        double wr =
-            (highest - klineData[i.ceil()].close) / (highest - lowest) * 100;
+        double wr = highest == lowest
+            ? 0.0
+            : (highest - klineData[i.ceil()].close) / (highest - lowest) * 100;
         if (wr < min || min == 0.0) min = wr;
         if (wr > max || max == 0.0) max = wr;
         wrList.add(wr);
@@ -318,7 +316,9 @@ class IndicatorDataHandler {
 
     double itemCount = KLineController.shared.itemCount;
     double endIndex = beginIdx + itemCount;
-    endIndex = endIndex < klineData.length ? endIndex : klineData.length.roundToDouble();
+    endIndex = endIndex < klineData.length
+        ? endIndex
+        : klineData.length.roundToDouble();
 
     double maxValue = 0.0;
     double minValue = 0.0;

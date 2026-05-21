@@ -7,7 +7,6 @@ import './kline_painter.dart';
 const double _scrollIndexTolerance = 0.000001;
 
 class KLineView extends StatefulWidget {
-
   KLineView({super.key});
 
   @override
@@ -15,8 +14,7 @@ class KLineView extends StatefulWidget {
 }
 
 class _KLineViewState extends State<KLineView> {
-
-  late final ScrollController _klineScrollCtr;
+  ScrollController? _klineScrollCtr;
 
   bool _hasInitScrollController = false;
   double _beginIdx = -1.0;
@@ -28,10 +26,11 @@ class _KLineViewState extends State<KLineView> {
 
   void _initScrollController(double initOffset) {
     if (_hasInitScrollController) return;
-    _klineScrollCtr = ScrollController(initialScrollOffset: initOffset);
+    final controller = ScrollController(initialScrollOffset: initOffset);
+    _klineScrollCtr = controller;
 
-    _klineScrollCtr.addListener(() {
-      double offsetX = _klineScrollCtr.offset;
+    controller.addListener(() {
+      double offsetX = controller.offset;
       _klineDidScroll(offsetX);
     });
     _hasInitScrollController = true;
@@ -49,8 +48,7 @@ class _KLineViewState extends State<KLineView> {
     );
     if ((_beginIdx - beginIdx).abs() < _scrollIndexTolerance) return;
     _beginIdx = beginIdx;
-    setState(() {
-    });
+    setState(() {});
   }
 
   // void _klineDidZoom(ScaleUpdateDetails details) {
@@ -83,13 +81,10 @@ class _KLineViewState extends State<KLineView> {
   void _klineDidZoom(ScaleUpdateDetails details) {
     if (details.pointerCount != 2) return;
 
-
     double scaleDelta = details.scale / _zoomFactor;
     _zoomFactor = details.scale;
 
     double newScale = _currentScale * scaleDelta;
-
-    debugPrint('details.scale: ${details.scale}, newScale: $newScale');
 
     if (newScale > 1.5) {
       _currentScale = 1.5;
@@ -100,14 +95,16 @@ class _KLineViewState extends State<KLineView> {
     }
 
     double dataLength = KLineController.shared.data.length.toDouble();
-    double count = KLineController.shared.itemCount + ((1 - _currentScale) * 4).ceil();
+    double count =
+        KLineController.shared.itemCount + ((1 - _currentScale) * 4).ceil();
     double maxCount = dataLength > KLineController.shared.maxCount
         ? KLineController.shared.maxCount
         : dataLength;
 
     count = count > maxCount ? maxCount : count;
-    count = count < KLineController.shared.minCount ? KLineController.shared.minCount : count;
-
+    count = count < KLineController.shared.minCount
+        ? KLineController.shared.minCount
+        : count;
 
     setState(() {
       _beginIdx = _beginIdx + (KLineController.shared.itemCount - count) / 2;
@@ -124,18 +121,17 @@ class _KLineViewState extends State<KLineView> {
 
   @override
   Widget build(BuildContext context) {
-
     int dataLength = KLineController.shared.data.length;
     if (dataLength == 0) {
-      return const Center(child: CircularProgressIndicator(
+      return const Center(
+          child: CircularProgressIndicator(
         strokeWidth: 2.0,
         color: Colors.blueGrey,
       ));
     }
     return Container(
-      margin: KLineController.shared.klineMargin,
-      child: LayoutBuilder(
-        builder: (ctx, constraints) {
+        margin: KLineController.shared.klineMargin,
+        child: LayoutBuilder(builder: (ctx, constraints) {
           double containerW = constraints.maxWidth;
           double containerH = constraints.maxHeight;
 
@@ -144,28 +140,35 @@ class _KLineViewState extends State<KLineView> {
           double spacing = KLineController.shared.spacing;
           // scroll size
           double contentSizeW = dataLength * (itemW + spacing);
-          if (_beginIdx < 0) { // init
+          if (_beginIdx < 0) {
+            // init
             // show begin index
             _beginIdx = (dataLength - itemCount).toDouble();
             if (_beginIdx < 0) _beginIdx = 0;
             // double beginOffset = _beginIdx / dataLength * contentSizeW;
-            double beginOffset = dataLength < itemCount ? 0.0 : contentSizeW - containerW;
+            double beginOffset =
+                dataLength < itemCount ? 0.0 : contentSizeW - containerW;
             _initScrollController(beginOffset);
           }
           return CustomPaint(
               painter: KLinePainter(KLineController.shared.data, _beginIdx),
               size: Size(containerW, containerH),
               child: GestureDetector(
-                onScaleStart: (details) => debugPrint('onScaleStart details.focalPoint: ${details.focalPoint}, details.localFocalPoint: ${details.localFocalPoint}'),
-                onScaleEnd: (details) => debugPrint('onScaleEnd details.velocity: ${details.velocity}, details.scaleVelocity: ${details.scaleVelocity}'),
+                onScaleStart: (details) {
+                  _zoomFactor = 1.0;
+                },
                 onScaleUpdate: (details) => _klineDidZoom(details),
-                onLongPressStart: (details) => _klineLongPress(details.localPosition),
-                onLongPressMoveUpdate: (details) => _klineLongPress(details.localPosition),
-                onLongPressEnd: (details) => _klineLongPress(details.localPosition),
+                onLongPressStart: (details) =>
+                    _klineLongPress(details.localPosition),
+                onLongPressMoveUpdate: (details) =>
+                    _klineLongPress(details.localPosition),
+                onLongPressEnd: (details) =>
+                    _klineLongPress(details.localPosition),
                 onTap: () => _klineLongPress(Offset.zero),
                 child: Stack(
                   children: [
-                    Positioned.fill(child: SingleChildScrollView(
+                    Positioned.fill(
+                        child: SingleChildScrollView(
                       controller: _klineScrollCtr,
                       scrollDirection: Axis.horizontal,
                       child: SizedBox(
@@ -176,23 +179,24 @@ class _KLineViewState extends State<KLineView> {
                     Align(
                       alignment: Alignment.topLeft,
                       child: RepaintBoundary(
-                        child: KlineInfoWidget(KLineController.shared.data, _beginIdx),
+                        child: KlineInfoWidget(
+                            KLineController.shared.data, _beginIdx),
                       ),
                     ),
-                    Positioned.fill(child: RepaintBoundary(
-                      child: KlineLongPressWidget(KLineController.shared.data, _beginIdx),
+                    Positioned.fill(
+                        child: RepaintBoundary(
+                      child: KlineLongPressWidget(
+                          KLineController.shared.data, _beginIdx),
                     ))
                   ],
                 ),
-              )
-          );
-        })
-    );
+              ));
+        }));
   }
 
   @override
   void dispose() {
-    _klineScrollCtr.dispose();
+    _klineScrollCtr?.dispose();
     super.dispose();
   }
 }

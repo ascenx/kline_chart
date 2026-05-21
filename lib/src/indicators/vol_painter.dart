@@ -5,8 +5,7 @@ import '../kline_controller.dart';
 import '../kline_data.dart';
 import '../indicators/indicator_data_handler.dart';
 
-
-class VolPainter  {
+class VolPainter {
   final List<KLineData> klineData;
   final double beginIdx;
 
@@ -22,7 +21,6 @@ class VolPainter  {
     ..color = Colors.red
     ..isAntiAlias = true;
 
-
   void paint(Canvas canvas, Size size, double max, double slideOffset) {
     if (klineData.isEmpty) return;
 
@@ -36,7 +34,8 @@ class VolPainter  {
     double min = 0.0;
     // calculated MA volume
     List<int> maPeriods = KLineController.shared.volMaPeriods;
-    IndicatorResult maRes = IndicatorDataHandler.ma(klineData, maPeriods, beginIdx, isVol: true);
+    IndicatorResult maRes =
+        IndicatorDataHandler.ma(klineData, maPeriods, beginIdx, isVol: true);
     List<List<double>> maList = [];
     double maMax = maRes.maxValue;
     maList = maRes.data;
@@ -49,23 +48,33 @@ class VolPainter  {
     int subIndicatorCount = showSubIndicators.length;
 
     double originBtm = size.height;
-    if (subIndicatorCount == 2 && showSubIndicators.first == IndicatorType.vol) {
-      originBtm = size.height - KLineController.shared.subIndicatorHeight - KLineController.shared.indicatorSpacing;
+    if (subIndicatorCount == 2 &&
+        showSubIndicators.first == IndicatorType.vol) {
+      originBtm = size.height -
+          KLineController.shared.subIndicatorHeight -
+          KLineController.shared.indicatorSpacing;
     }
     // originBtm -= KLineConfig.shared.indicatorInfoHeight;
 
-
-    for (var i = beginIdx;i < beginIdx + itemCount;++i) {
+    double endIndex = beginIdx + itemCount;
+    if (endIndex > klineData.length) endIndex = klineData.length.toDouble();
+    for (var i = beginIdx; i < endIndex; ++i) {
       KLineData data = klineData[i.ceil()];
 
       double open = data.open;
       double close = data.close;
       double volume = data.volume;
 
-      double volumeH = (height - KLineController.shared.indicatorInfoHeight) * volume / valueOffset;
+      double volumeH = valueOffset == 0.0
+          ? 0.0
+          : (height - KLineController.shared.indicatorInfoHeight) *
+              volume /
+              valueOffset;
 
       canvas.drawRect(
-            Rect.fromLTWH(rectLeft + slideOffset, originBtm - volumeH, itemW, volumeH), close > open ? riseRectPaint : fallRectPaint);
+          Rect.fromLTWH(
+              rectLeft + slideOffset, originBtm - volumeH, itemW, volumeH),
+          close > open ? riseRectPaint : fallRectPaint);
 
       rectLeft += (itemW + spacing);
     }
@@ -76,12 +85,20 @@ class VolPainter  {
     // }
 
     // volume ma indicator
-    IndicatorLinePainter.paint(canvas, Size(size.width, height), height - KLineController.shared.indicatorInfoHeight, IndicatorType.maVol, maList, maPeriods, beginIdx, slideOffset, max, min, top: originBtm - height, infoTopOffset: 0.0);
-
+    IndicatorLinePainter.paint(
+        canvas,
+        Size(size.width, height),
+        height - KLineController.shared.indicatorInfoHeight,
+        IndicatorType.maVol,
+        maList,
+        maPeriods,
+        beginIdx,
+        slideOffset,
+        max,
+        min,
+        top: originBtm - height,
+        infoTopOffset: 0.0);
   }
 
-  void drawMa(Canvas canvas, Size size) {
-
-  }
-
+  void drawMa(Canvas canvas, Size size) {}
 }

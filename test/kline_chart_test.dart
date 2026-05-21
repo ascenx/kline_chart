@@ -1,8 +1,24 @@
-import 'package:test/test.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:kline_chart/kline_chart.dart';
+import 'package:kline_chart/src/indicators/indicator_data_handler.dart';
 import 'package:kline_chart/src/kline_painter.dart';
 
 void main() {
+  setUp(() {
+    KLineController.shared.data = [];
+    KLineController.shared.itemCount = 30;
+    KLineController.shared.spacing = 2.0;
+    KLineController.shared.itemWidth = 0.0;
+    KLineController.shared.showMainIndicators = [IndicatorType.ma];
+    KLineController.shared.showSubIndicators = [
+      IndicatorType.vol,
+      IndicatorType.kdj
+    ];
+    KLineController.shared.showTimeChart = false;
+    KLineController.shared.longPressOffset.update(Offset.zero);
+  });
+
   group('KLineController.beginIndexForScrollOffset', () {
     test('clamps trailing overscroll to the last fully visible candle', () {
       const dataLength = 100;
@@ -51,5 +67,88 @@ void main() {
 
       expect(newPainter.shouldRepaint(oldPainter), isTrue);
     });
+  });
+
+  group('KLineView stability', () {
+    testWidgets('can be disposed before scroll controller is initialized',
+        (tester) async {
+      KLineController.shared.data = [];
+
+      await tester.pumpWidget(MaterialApp(home: KLineView()));
+      await tester.pumpWidget(const SizedBox.shrink());
+
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('renders when data is shorter than the visible item count',
+        (tester) async {
+      KLineController.shared.data = _buildKLineData(5);
+
+      await tester.pumpWidget(MaterialApp(
+        home: SizedBox(width: 300, height: 240, child: KLineView()),
+      ));
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets(
+        'renders flat price and zero volume data without invalid canvas values',
+        (tester) async {
+      KLineController.shared.data = _buildKLineData(40, flat: true);
+
+      await tester.pumpWidget(MaterialApp(
+        home: SizedBox(width: 300, height: 240, child: KLineView()),
+      ));
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('renders time chart when data starts at the first item',
+        (tester) async {
+      KLineController.shared.data = _buildKLineData(5);
+      KLineController.shared.showTimeChart = true;
+
+      await tester.pumpWidget(MaterialApp(
+        home: SizedBox(width: 300, height: 240, child: KLineView()),
+      ));
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('IndicatorDataHandler visible windows', () {
+    test('clamps calculations when item count exceeds data length', () {
+      final data = _buildKLineData(5);
+
+      expect(
+        () => IndicatorDataHandler.ema(data, [2], 0),
+        returnsNormally,
+      );
+      expect(
+        () => IndicatorDataHandler.boll(data, 2, 2, 0),
+        returnsNormally,
+      );
+      expect(
+        () => IndicatorDataHandler.wr(data, [2], 0),
+        returnsNormally,
+      );
+    });
+  });
+}
+
+List<KLineData> _buildKLineData(int count, {bool flat = false}) {
+  return List.generate(count, (index) {
+    final price = flat ? 10.0 : 10.0 + index;
+    return KLineData(
+      open: price,
+      high: flat ? price : price + 1,
+      low: flat ? price : price - 1,
+      close: flat ? price : price + 0.5,
+      volume: flat ? 0.0 : 100.0 + index,
+      time: index,
+    );
   });
 }
