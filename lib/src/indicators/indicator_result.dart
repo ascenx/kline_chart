@@ -5,5 +5,5 @@ class IndicatorResult {
 
   IndicatorResult(this.data, this.maxValue, this.minValue);
 
-  static get empty => IndicatorResult([],0.0, 0.0);
+  static IndicatorResult get empty => IndicatorResult([],0.0, 0.0);
 }

@@ -118,8 +118,9 @@ class IndicatorDataHandler {
 
   static IndicatorResult boll(
       List<KLineData> klineData, int period, int bandwidth, double beginIdx) {
-    if (klineData.isEmpty || period < 0 || bandwidth < 0)
+    if (klineData.isEmpty || period < 0 || bandwidth < 0) {
       return IndicatorResult.empty;
+    }
 
     List<double> upList = [];
     List<double> mbList = [];
