@@ -453,5 +453,8 @@ class KLinePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant KLinePainter oldDelegate) {
+    return oldDelegate.klineData != klineData ||
+        oldDelegate.beginIdx != beginIdx;
+  }
 }

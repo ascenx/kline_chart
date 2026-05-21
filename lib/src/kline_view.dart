@@ -4,6 +4,8 @@ import './kline_info_widget.dart';
 import './kline_long_press_widget.dart';
 import './kline_painter.dart';
 
+const double _scrollIndexTolerance = 0.000001;
+
 class KLineView extends StatefulWidget {
 
   KLineView({super.key});
@@ -39,21 +41,15 @@ class _KLineViewState extends State<KLineView> {
     KLineController.shared.longPressOffset.update(Offset.zero);
     double itemW = KLineController.shared.itemWidth;
     double spacing = KLineController.shared.spacing;
-    double nowIdx = offsetX / (itemW + spacing);
-    debugPrint('nowIdx: $nowIdx');
-    if (nowIdx < 0) {
-      _beginIdx = 0.0;
-    } else {
-        if (nowIdx + KLineController.shared.itemCount > KLineController.shared.data.length) {
-          // print("00000000 return:$nowIdx, count:${KLineConfig.shared.itemCount}, _dataLength: $_dataLength");
-          return;
-        }
-        _beginIdx = nowIdx;
-    }
-    debugPrint('beginIdx:$_beginIdx');
-    // if (_lastBeginIdx == _beginIdx) return;
+    double beginIdx = KLineController.beginIndexForScrollOffset(
+      offset: offsetX,
+      itemExtent: itemW + spacing,
+      itemCount: KLineController.shared.itemCount,
+      dataLength: KLineController.shared.data.length,
+    );
+    if ((_beginIdx - beginIdx).abs() < _scrollIndexTolerance) return;
+    _beginIdx = beginIdx;
     setState(() {
-      // _lastBeginIdx = _beginIdx;
     });
   }
 

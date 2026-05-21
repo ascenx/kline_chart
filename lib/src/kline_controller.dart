@@ -137,6 +137,25 @@ class KLineController {
     return itemW;
   }
 
+  static double beginIndexForScrollOffset({
+    required double offset,
+    required double itemExtent,
+    required double itemCount,
+    required int dataLength,
+  }) {
+    if (dataLength <= 0 || itemCount <= 0 || itemExtent <= 0) {
+      return 0.0;
+    }
+
+    final rawBeginIndex = offset / itemExtent;
+    if (rawBeginIndex.isNaN || rawBeginIndex.isInfinite) {
+      return 0.0;
+    }
+
+    final maxBeginIndex = max(0.0, dataLength - itemCount);
+    return rawBeginIndex.clamp(0.0, maxBeginIndex).toDouble();
+  }
+
   // singleton
   KLineController._internal();
   static final KLineController shared = KLineController._internal();
