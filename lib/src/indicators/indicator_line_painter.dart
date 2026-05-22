@@ -77,8 +77,9 @@ class IndicatorLinePainter {
         double indicatorY = valueOffset == 0.0
             ? drawAreaHeight * 0.5 + top
             : drawAreaHeight * (1 - (value - minValue) / valueOffset) + top;
-        if (type.isMain)
+        if (type.isMain) {
           indicatorY += KLineController.shared.mainIndicatorInfoMargin;
+        }
         indicatorY += KLineController.shared.indicatorInfoHeight;
 
         indicatorX =

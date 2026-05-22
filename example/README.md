@@ -23,7 +23,7 @@
 
 - Improve scale gesture
 - MACD sub indicator
-- RSI sub indicator
+- ~~RSI sub indicator~~
 - SAR  indicator
 
 - Highly customized

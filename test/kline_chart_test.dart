@@ -215,6 +215,62 @@ void main() {
       );
     });
   });
+
+  group('IndicatorDataHandler.rsi', () {
+    test(
+        'calculates Wilder-smoothed RSI values for the visible close-price window',
+        () {
+      KLineController.shared.itemCount = 6;
+      final data = _buildKLineDataFromCloses([10, 12, 11, 14, 13, 15]);
+
+      final result = IndicatorDataHandler.rsi(data, [3], 0);
+      final rsi = result.data.single;
+
+      expect(rsi[0], -1);
+      expect(rsi[1], -1);
+      expect(rsi[2], -1);
+      expect(rsi[3], closeTo(83.333333, 0.000001));
+      expect(rsi[4], closeTo(66.666667, 0.000001));
+      expect(rsi[5], closeTo(79.166667, 0.000001));
+    });
+
+    test('uses rounded visible RSI bounds for rendering', () {
+      KLineController.shared.itemCount = 6;
+      final data = _buildKLineDataFromCloses([10, 12, 11, 14, 13, 15]);
+
+      final result = IndicatorDataHandler.rsi(data, [3], 0);
+
+      expect(result.maxValue, 84);
+      expect(result.minValue, 66);
+    });
+
+    test(
+        'falls back to the full RSI scale before the first valid value is visible',
+        () {
+      KLineController.shared.itemCount = 3;
+      final data = _buildKLineDataFromCloses([10, 12, 11, 14, 13, 15]);
+
+      final result = IndicatorDataHandler.rsi(data, [6], 0);
+
+      expect(result.data.single, [-1, -1, -1]);
+      expect(result.maxValue, 100);
+      expect(result.minValue, 0);
+    });
+  });
+
+  group('RSI sub indicator rendering', () {
+    testWidgets('renders RSI as a line sub indicator', (tester) async {
+      KLineController.shared.data = _buildKLineData(40);
+      KLineController.shared.showSubIndicators = [IndicatorType.rsi];
+
+      await tester.pumpWidget(MaterialApp(
+        home: SizedBox(width: 300, height: 240, child: KLineView()),
+      ));
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+    });
+  });
 }
 
 List<KLineData> _buildKLineData(int count, {bool flat = false}) {
@@ -226,6 +282,20 @@ List<KLineData> _buildKLineData(int count, {bool flat = false}) {
       low: flat ? price : price - 1,
       close: flat ? price : price + 0.5,
       volume: flat ? 0.0 : 100.0 + index,
+      time: index,
+    );
+  });
+}
+
+List<KLineData> _buildKLineDataFromCloses(List<double> closes) {
+  return List.generate(closes.length, (index) {
+    final close = closes[index];
+    return KLineData(
+      open: close,
+      high: close + 1,
+      low: close - 1,
+      close: close,
+      volume: 100.0 + index,
       time: index,
     );
   });

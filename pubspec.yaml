@@ -1,5 +1,5 @@
 name: kline_chart
-description: flutter kline chart plugin
+description: flutter kline chart plugin, support multiple indicators, MA, EMA, VOL, BOLL, KDJ, RSI, WR, OBV
 version: 0.0.1+3
 
 homepage: https://github.com/AscenX/kline_chart

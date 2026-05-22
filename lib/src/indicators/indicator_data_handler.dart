@@ -277,6 +277,98 @@ class IndicatorDataHandler {
     return IndicatorResult([kValues, dValues, jValues], maxValue, minValue);
   }
 
+  static IndicatorResult rsi(
+      List<KLineData> klineData, List<int> periods, double beginIdx) {
+    if (klineData.isEmpty || periods.isEmpty) return IndicatorResult.empty;
+
+    List<List<double>> dataList = [];
+    double max = 0.0;
+    double min = 0.0;
+    bool hasVisibleValue = false;
+    bool hasValidPeriod = false;
+
+    for (var idx = 0; idx < periods.length; ++idx) {
+      int period = periods[idx];
+      if (period <= 0) {
+        dataList.add([]);
+        continue;
+      }
+      hasValidPeriod = true;
+
+      List<double> rsiList = [];
+      double avgGain = 0.0;
+      double avgLoss = 0.0;
+
+      for (int i = 0; i < klineData.length; ++i) {
+        if (i < period) {
+          if (i > 0) {
+            double diff = klineData[i].close - klineData[i - 1].close;
+            if (diff > 0) {
+              avgGain += diff;
+            } else {
+              avgLoss -= diff;
+            }
+          }
+          rsiList.add(-1);
+          continue;
+        }
+
+        double diff = klineData[i].close - klineData[i - 1].close;
+        double gain = 0.0;
+        double loss = 0.0;
+        if (diff > 0) {
+          gain = diff;
+        } else {
+          loss = -diff;
+        }
+
+        if (i == period) {
+          if (diff > 0) {
+            avgGain += diff;
+          } else {
+            avgLoss -= diff;
+          }
+          avgGain /= period;
+          avgLoss /= period;
+        } else {
+          avgGain = (avgGain * (period - 1) + gain) / period;
+          avgLoss = (avgLoss * (period - 1) + loss) / period;
+        }
+
+        double rsi = _rsiFromAverageGainLoss(avgGain, avgLoss);
+        rsiList.add(rsi);
+      }
+
+      int start = _visibleStart(beginIdx);
+      int end = _visibleEnd(klineData, beginIdx);
+      List<double> subList = start < end ? rsiList.sublist(start, end) : [];
+      for (double rsi in subList) {
+        if (rsi < 0) continue;
+        if (!hasVisibleValue) {
+          max = rsi;
+          min = rsi;
+          hasVisibleValue = true;
+        } else {
+          if (rsi > max) max = rsi;
+          if (rsi < min) min = rsi;
+        }
+      }
+      dataList.add(subList);
+    }
+
+    if (!hasVisibleValue) {
+      return IndicatorResult(dataList, hasValidPeriod ? 100.0 : 0.0, 0.0);
+    }
+    return IndicatorResult(dataList, max.ceilToDouble(), min.floorToDouble());
+  }
+
+  static double _rsiFromAverageGainLoss(double avgGain, double avgLoss) {
+    if (avgGain == 0.0 && avgLoss == 0.0) return 50.0;
+    if (avgLoss == 0.0) return 100.0;
+    if (avgGain == 0.0) return 0.0;
+    return avgGain / (avgGain + avgLoss) * 100;
+  }
+
   static IndicatorResult wr(
       List<KLineData> klineData, List<int> periods, double beginIdx) {
     if (klineData.isEmpty || periods.isEmpty) return IndicatorResult.empty;

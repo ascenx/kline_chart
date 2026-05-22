@@ -221,6 +221,14 @@ class KLinePainter extends CustomPainter {
       subHighest[kdjType] = res.maxValue;
       subLowest[kdjType] = res.minValue;
     }
+    IndicatorType rsiType = IndicatorType.rsi;
+    if (showSubIndicators.contains(rsiType)) {
+      var res = IndicatorDataHandler.rsi(
+          klineData, KLineController.shared.rsiPeriods, beginIdx);
+      subIndicatorData[rsiType] = res.data;
+      subHighest[rsiType] = res.maxValue;
+      subLowest[rsiType] = res.minValue;
+    }
     IndicatorType wrType = IndicatorType.wr;
     if (showSubIndicators.contains(wrType)) {
       var res = IndicatorDataHandler.wr(

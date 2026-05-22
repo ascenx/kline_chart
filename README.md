@@ -10,7 +10,7 @@
 
 ```dart
 import 'package:flutter/material.dart';
-import 'package:flutter_kline/flutter_kline.dart';
+import 'package:kline_chart/kline_chart.dart';
 
 
 class MyHomePage extends StatefulWidget {
@@ -92,7 +92,7 @@ class _MyHomePageState extends State<MyHomePage> {
 - ~~Improve scale gesture~~
 
 - MACD sub indicator
-- RSI sub indicator
+- ~~RSI sub indicator~~
 - SAR  indicator
 
 - Highly customized
