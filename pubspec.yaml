@@ -1,5 +1,5 @@
 name: kline_chart
-description: KLine Chart is a lightweight Flutter charting library for building interactive financial candlestick charts. It supports common technical indicators such as MA, EMA, BOLL, VOL, MACD, KDJ, RSI, WR, and OBV, along with smooth scrolling, zooming, long-press crosshair interaction, and detailed price/indicator overlays. The project is designed for crypto, stock, and trading-related applications that need a customizable and responsive K-line chart component.
+description: Flutter native candlestick chart without dependencies, high performance, smooth scrolling, supports multiple indicators
 version: 0.0.1+4
 
 homepage: https://github.com/AscenX/kline_chart

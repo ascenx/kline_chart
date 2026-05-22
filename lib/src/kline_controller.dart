@@ -177,11 +177,17 @@ class KLineController {
     required int dataLength,
   }) {
     double itemExtent = itemWidth + spacing;
-    if (dataLength <= 0 || itemExtent <= 0) return 0;
+    if (dataLength <= 0 || itemExtent <= 0) {
+      return 0;
+    }
 
     int index = ((localX - itemWidth * 0.5) / itemExtent + beginIndex).round();
-    if (index < 0) return 0;
-    if (index >= dataLength) return dataLength - 1;
+    if (index < 0) {
+      return 0;
+    }
+    if (index >= dataLength) {
+      return dataLength - 1;
+    }
     return index;
   }
 

@@ -169,7 +169,9 @@ class _KLineViewState extends State<KLineView> {
             // init
             // show begin index
             _beginIdx = (dataLength - itemCount).toDouble();
-            if (_beginIdx < 0) _beginIdx = 0;
+            if (_beginIdx < 0) {
+              _beginIdx = 0;
+            }
             // double beginOffset = _beginIdx / dataLength * contentSizeW;
             double beginOffset =
                 dataLength < itemCount ? 0.0 : contentSizeW - containerW;

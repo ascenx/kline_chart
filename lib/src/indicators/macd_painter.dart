@@ -51,7 +51,9 @@ class MACDPainter {
     if (dataList[0].isEmpty || dataList[1].isEmpty || dataList[2].isEmpty) {
       return;
     }
-    if (lineColors.isEmpty) lineColors = KLineController.shared.indicatorColors;
+    if (lineColors.isEmpty) {
+      lineColors = KLineController.shared.indicatorColors;
+    }
     Color macdColor = _lineColor(lineColors, 0, Colors.orange);
     Color signalColor = _lineColor(lineColors, 1, Colors.purple);
 
@@ -119,7 +121,9 @@ class MACDPainter {
       );
       double topY = value >= 0 ? valueY : zeroY;
       double height = (zeroY - valueY).abs();
-      if (height == 0.0) height = 1.0;
+      if (height == 0.0) {
+        height = 1.0;
+      }
       double previousValue = _previousValidValue(histogram, i);
       bool isSolid = isSolidHistogramBar(value, previousValue);
       canvas.drawRect(
@@ -183,7 +187,9 @@ class MACDPainter {
     double maxValue,
     double minValue,
   ) {
-    if (valueOffset == 0.0) return top + height * 0.5;
+    if (valueOffset == 0.0) {
+      return top + height * 0.5;
+    }
     return height * (1 - (value - minValue) / valueOffset) + top;
   }
 
@@ -196,7 +202,9 @@ class MACDPainter {
     int? selectedIndex,
   }) {
     if (dataList.length < 3 || periods.length != 3) return;
-    if (lineColors.isEmpty) lineColors = KLineController.shared.indicatorColors;
+    if (lineColors.isEmpty) {
+      lineColors = KLineController.shared.indicatorColors;
+    }
     Color macdColor = _lineColor(lineColors, 0, Colors.orange);
     Color signalColor = _lineColor(lineColors, 1, Colors.purple);
     double? histogramValue = infoValue(dataList[2], selectedIndex);
@@ -236,18 +244,24 @@ class MACDPainter {
   }
 
   Color _lineColor(List<Color> lineColors, int index, Color fallback) {
-    if (index < lineColors.length) return lineColors[index];
+    if (index < lineColors.length) {
+      return lineColors[index];
+    }
     return fallback;
   }
 
   Paint _histogramPaint(double value, bool isSolid) {
-    if (value >= 0) return isSolid ? _positivePaint : _positiveStrokePaint;
+    if (value >= 0) {
+      return isSolid ? _positivePaint : _positiveStrokePaint;
+    }
     return isSolid ? _negativePaint : _negativeStrokePaint;
   }
 
   double _previousValidValue(List<double> values, int index) {
     for (int i = index - 1; i >= 0; --i) {
-      if (!_isInvalidValue(values[i])) return values[i];
+      if (!_isInvalidValue(values[i])) {
+        return values[i];
+      }
     }
     return 0.0;
   }
@@ -260,17 +274,23 @@ class MACDPainter {
   }
 
   static double? infoValue(List<double> values, int? selectedIndex) {
-    if (values.isEmpty) return null;
+    if (values.isEmpty) {
+      return null;
+    }
 
     if (selectedIndex != null) {
-      if (selectedIndex < 0 || selectedIndex >= values.length) return null;
+      if (selectedIndex < 0 || selectedIndex >= values.length) {
+        return null;
+      }
       double value = values[selectedIndex];
       return _isInvalidInfoValue(value) ? null : value;
     }
 
     for (int i = values.length - 1; i >= 0; --i) {
       double value = values[i];
-      if (!_isInvalidInfoValue(value)) return value;
+      if (!_isInvalidInfoValue(value)) {
+        return value;
+      }
     }
     return null;
   }
@@ -278,7 +298,9 @@ class MACDPainter {
   static bool _isInvalidInfoValue(double value) => value == -1.0;
 
   static bool isSolidHistogramBar(double value, double previousValue) {
-    if (value >= 0) return value >= previousValue;
+    if (value >= 0) {
+      return value >= previousValue;
+    }
     return value <= previousValue;
   }
 }

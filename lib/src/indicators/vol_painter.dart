@@ -40,7 +40,9 @@ class VolPainter {
     List<List<double>> maList = [];
     double maMax = maRes.maxValue;
     maList = maRes.data;
-    if (maMax > max) max = maMax;
+    if (maMax > max) {
+      max = maMax;
+    }
 
     double valueOffset = max;
     double rectLeft = 0;
@@ -58,7 +60,9 @@ class VolPainter {
     // originBtm -= KLineConfig.shared.indicatorInfoHeight;
 
     double endIndex = beginIdx + itemCount;
-    if (endIndex > klineData.length) endIndex = klineData.length.toDouble();
+    if (endIndex > klineData.length) {
+      endIndex = klineData.length.toDouble();
+    }
     for (var i = beginIdx; i < endIndex; ++i) {
       final dataIndex = i.ceil();
       if (dataIndex >= klineData.length) break;

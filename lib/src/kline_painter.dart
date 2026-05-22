@@ -159,7 +159,9 @@ class KLinePainter extends CustomPainter {
         lowestIdx = i;
       }
       double volume = data.volume;
-      if (volume > maxVolume) maxVolume = volume;
+      if (volume > maxVolume) {
+        maxVolume = volume;
+      }
     }
 
     double mainHighest = highest, mainLowest = lowest;
@@ -181,9 +183,12 @@ class KLinePainter extends CustomPainter {
       mainIndicatorData = res.data;
       double mainIndicatorMax = res.maxValue;
       double mainIndicatorMin = res.minValue;
-      if (mainIndicatorMax > highest) highest = mainIndicatorMax;
-      if (mainIndicatorMin < lowest && mainIndicatorMin != 0.0)
+      if (mainIndicatorMax > highest) {
+        highest = mainIndicatorMax;
+      }
+      if (mainIndicatorMin < lowest && mainIndicatorMin != 0.0) {
         lowest = mainIndicatorMin;
+      }
     }
 
     bool isShowBOLL =
@@ -198,8 +203,12 @@ class KLinePainter extends CustomPainter {
       double bollMax = res.maxValue;
       double bollMin = res.minValue;
 
-      if (bollMax > highest) highest = bollMax;
-      if (bollMin < lowest && bollMin != 0.0) lowest = bollMin;
+      if (bollMax > highest) {
+        highest = bollMax;
+      }
+      if (bollMin < lowest && bollMin != 0.0) {
+        lowest = bollMin;
+      }
     }
 
     _drawRulerLine(
@@ -462,12 +471,16 @@ class KLinePainter extends CustomPainter {
 
   double _valueToY(double value, double minValue, double valueOffset,
       double height, double top) {
-    if (valueOffset == 0.0) return top + height * 0.5;
+    if (valueOffset == 0.0) {
+      return top + height * 0.5;
+    }
     return height * (1 - (value - minValue) / valueOffset) + top;
   }
 
   double _valueHeight(double valueOffset, double range, double height) {
-    if (range == 0.0) return 0.0;
+    if (range == 0.0) {
+      return 0.0;
+    }
     return valueOffset / range * height;
   }
 
@@ -549,9 +562,10 @@ class KLinePainter extends CustomPainter {
       canvas.drawLine(Offset(width * i / 5, 0),
           Offset(width * i / 5, canvasSize.height), _rulerPaint);
       // draw horizontal line
-      if (i > 0)
+      if (i > 0) {
         canvas.drawLine(Offset(0, height * i / 4 + top),
             Offset(width, height * i / 4 + top), _rulerPaint);
+      }
       // draw rule text
       _drawText(
           canvas,
@@ -572,7 +586,7 @@ class KLinePainter extends CustomPainter {
         _currentPricePaint);
     _drawText(canvas, currentPrice, Offset(offset.dx + 3, offset.dy - 6));
 
-    // 画虚线
+    // draw dotted line
     double startX = 0.0;
     double dashWidth = 3.0;
     while (startX < offset.dx - 2) {
@@ -589,7 +603,9 @@ class KLinePainter extends CustomPainter {
     required double spacing,
     required int dataLength,
   }) {
-    if (longPressOffset == Offset.zero || dataLength <= 0) return null;
+    if (longPressOffset == Offset.zero || dataLength <= 0) {
+      return null;
+    }
 
     final dataIndex = KLineController.dataIndexForLocalX(
       localX: longPressOffset.dx,

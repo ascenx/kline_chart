@@ -128,7 +128,9 @@ class KLineIndicatorInfoPainter extends CustomPainter {
 
   IndicatorResult _indicatorResult(IndicatorType type) {
     final cached = _resultCache[type];
-    if (cached != null) return cached;
+    if (cached != null) {
+      return cached;
+    }
 
     final result = _calculateIndicatorResult(type);
     _resultCache[type] = result;

@@ -21,7 +21,9 @@ class IndicatorLinePainter {
       int? selectedIndex,
       bool showInfo = true}) {
     if (periods.isEmpty) return;
-    if (lineColors.isEmpty) lineColors = KLineController.shared.indicatorColors;
+    if (lineColors.isEmpty) {
+      lineColors = KLineController.shared.indicatorColors;
+    }
 
     double width = size.width;
 
@@ -110,7 +112,9 @@ class IndicatorLinePainter {
   }
 
   static bool _isInvalidLineValue(IndicatorType type, double value) {
-    if (type == IndicatorType.obv || type == IndicatorType.kdj) return false;
+    if (type == IndicatorType.obv || type == IndicatorType.kdj) {
+      return false;
+    }
     return value < 0;
   }
 
@@ -122,27 +126,35 @@ class IndicatorLinePainter {
 
   static double? infoValue(
       IndicatorType type, List<double> values, int? selectedIndex) {
-    if (values.isEmpty) return null;
+    if (values.isEmpty) {
+      return null;
+    }
 
     if (selectedIndex != null) {
       int valueIndex = selectedIndex;
       if (type == IndicatorType.ma || type == IndicatorType.maVol) {
         valueIndex += 1;
       }
-      if (valueIndex < 0 || valueIndex >= values.length) return null;
+      if (valueIndex < 0 || valueIndex >= values.length) {
+        return null;
+      }
       double value = values[valueIndex];
       return _isInvalidInfoValue(type, value) ? null : value;
     }
 
     for (int i = values.length - 1; i >= 0; --i) {
       double value = values[i];
-      if (!_isInvalidInfoValue(type, value)) return value;
+      if (!_isInvalidInfoValue(type, value)) {
+        return value;
+      }
     }
     return null;
   }
 
   static bool _isInvalidInfoValue(IndicatorType type, double value) {
-    if (type == IndicatorType.obv || type == IndicatorType.kdj) return false;
+    if (type == IndicatorType.obv || type == IndicatorType.kdj) {
+      return false;
+    }
     return value < 0;
   }
 
@@ -155,7 +167,9 @@ class IndicatorLinePainter {
       String valueText = infoValueText(type, values, selectedIndex);
 
       if (type == IndicatorType.kdj) {
-        if (periods.length < 3) break;
+        if (periods.length < 3) {
+          break;
+        }
         if (idx == 0) {
           infoList.add("${type.name}($period, ${periods[1]}, ${periods[2]})");
           infoList.add("K $valueText");
@@ -181,7 +195,9 @@ class IndicatorLinePainter {
       double topOffset = 0.0,
       int? selectedIndex}) {
     if (periods.isEmpty) return;
-    if (lineColors.isEmpty) lineColors = KLineController.shared.indicatorColors;
+    if (lineColors.isEmpty) {
+      lineColors = KLineController.shared.indicatorColors;
+    }
     showIndicatorInfo(
       canvas,
       size,

@@ -34,7 +34,9 @@ class KlineLongPressWidget extends StatelessWidget {
     return ValueListenableBuilder<Offset>(
         valueListenable: KLineController.shared.longPressOffset,
         builder: (ctx, offset, child) {
-          if (offset == Offset.zero) return const SizedBox.shrink();
+          if (offset == Offset.zero) {
+            return const SizedBox.shrink();
+          }
           Offset itemOffset = _convertToItemOffset(offset);
           return CustomPaint(
             foregroundPainter:
