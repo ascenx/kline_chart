@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import './kline_chart_style.dart';
 import './kline_controller.dart';
 import './kline_data.dart';
 
@@ -53,8 +54,10 @@ class KLineLongPressPainter extends CustomPainter {
   StreamSubscription? longPressSub;
 
   var longPressOffset = Offset.zero;
+  final KLineCrosshairStyle _style;
 
-  KLineLongPressPainter(this.klineData, this.beginIdx, this.longPressOffset);
+  KLineLongPressPainter(this.klineData, this.beginIdx, this.longPressOffset)
+      : _style = KLineController.shared.crosshairStyle;
 
   final _linePaint = Paint()
     ..style = PaintingStyle.stroke
@@ -65,6 +68,9 @@ class KLineLongPressPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     if (klineData.isEmpty) return;
+    _linePaint
+      ..color = _style.color
+      ..strokeWidth = _style.strokeWidth;
 
     // draw vertical line
     canvas.drawLine(Offset(longPressOffset.dx, 0),
@@ -77,6 +83,7 @@ class KLineLongPressPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant KLineLongPressPainter oldDelegate) {
     return longPressOffset.dx.ceil() != oldDelegate.longPressOffset.dx.ceil() ||
-        longPressOffset.dy != oldDelegate.longPressOffset.dy;
+        longPressOffset.dy != oldDelegate.longPressOffset.dy ||
+        _style != oldDelegate._style;
   }
 }

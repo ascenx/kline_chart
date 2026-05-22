@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../indicators/indicator_line_painter.dart';
 import '../indicators/indicator_result.dart';
+import '../kline_chart_style.dart';
 import '../kline_controller.dart';
 import '../kline_data.dart';
 import '../indicators/indicator_data_handler.dart';
@@ -8,8 +9,10 @@ import '../indicators/indicator_data_handler.dart';
 class VolPainter {
   final List<KLineData> klineData;
   final double beginIdx;
+  final KLineVolumeStyle _style;
 
-  VolPainter(this.klineData, this.beginIdx);
+  VolPainter(this.klineData, this.beginIdx)
+      : _style = KLineController.shared.volumeStyle;
 
   final riseRectPaint = Paint()
     ..style = PaintingStyle.fill
@@ -24,6 +27,8 @@ class VolPainter {
   void paint(Canvas canvas, Size size, double max, double slideOffset,
       {int? selectedIndex, bool showInfo = true}) {
     if (klineData.isEmpty) return;
+    riseRectPaint.color = _style.riseColor;
+    fallRectPaint.color = _style.fallColor;
 
     double height = KLineController.shared.subIndicatorHeight;
     double width = size.width;

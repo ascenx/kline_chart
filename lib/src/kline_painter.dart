@@ -1,8 +1,10 @@
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import './indicators/indicator_data_handler.dart';
 import './indicators/indicator_result.dart';
+import './kline_chart_style.dart';
 import './kline_controller.dart';
 import './indicators/indicator_line_painter.dart';
 import './indicators/macd_painter.dart';
@@ -13,10 +15,19 @@ import './kline_data.dart';
 class KLinePainter extends CustomPainter {
   final List<KLineData> klineData;
   final double beginIdx;
+  final KLineChartStyle _chartStyle;
+  final KLineCandleStyle _candleStyle;
+  final KLineVolumeStyle _volumeStyle;
+  final List<Color> _indicatorColors;
   final Color _sarColor;
 
   KLinePainter(this.klineData, this.beginIdx)
-      : _sarColor = KLineController.shared.sarColor;
+      : _chartStyle = KLineController.shared.chartStyle,
+        _candleStyle = KLineController.shared.candleStyle,
+        _volumeStyle = KLineController.shared.volumeStyle,
+        _indicatorColors =
+            List<Color>.of(KLineController.shared.indicatorColors),
+        _sarColor = KLineController.shared.sarColor;
 
   final _riseRectPaint = Paint()
     ..style = PaintingStyle.fill
@@ -87,7 +98,14 @@ class KLinePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    canvas.drawRect(
+      Offset.zero & size,
+      Paint()
+        ..style = PaintingStyle.fill
+        ..color = _chartStyle.backgroundColor,
+    );
     if (klineData.isEmpty) return;
+    _configurePaints();
 
     // debugPrint('debug: kline painter repaint');
 
@@ -116,8 +134,8 @@ class KLinePainter extends CustomPainter {
       const Offset(0, 0),
       Offset(0, mainHeight),
       <Color>[
-        Colors.lightBlueAccent,
-        Colors.lightBlueAccent.withValues(alpha: 0.0),
+        _chartStyle.timeLineFillColor,
+        _chartStyle.timeLineFillColor.withValues(alpha: 0.0),
       ],
     );
 
@@ -399,6 +417,7 @@ class KLinePainter extends CustomPainter {
           highest,
           lowest,
           top: KLineController.shared.klineMargin.top,
+          lineColors: _indicatorColors,
           showInfo: false,
           debugData: klineData);
     }
@@ -418,6 +437,7 @@ class KLinePainter extends CustomPainter {
           highest,
           lowest,
           top: KLineController.shared.klineMargin.top,
+          lineColors: _indicatorColors,
           showInfo: false);
     }
 
@@ -469,7 +489,7 @@ class KLinePainter extends CustomPainter {
             subHighest[type] ?? 0.0,
             subLowest[type] ?? 0.0,
             top: subTop,
-            lineColors: KLineController.shared.indicatorColors,
+            lineColors: _indicatorColors,
             showInfo: false);
       }
 
@@ -486,7 +506,7 @@ class KLinePainter extends CustomPainter {
             subHighest[type] ?? 0.0,
             subLowest[type] ?? 0.0,
             top: subTop,
-            lineColors: KLineController.shared.indicatorColors,
+            lineColors: _indicatorColors,
             showInfo: false);
       }
     }
@@ -517,6 +537,30 @@ class KLinePainter extends CustomPainter {
     return valueOffset / range * height;
   }
 
+  void _configurePaints() {
+    _riseRectPaint.color = _candleStyle.riseColor;
+    _riseLinePaint
+      ..color = _candleStyle.riseWickColor
+      ..strokeWidth = _candleStyle.wickLineWidth;
+    _fallRectPaint.color = _candleStyle.fallColor;
+    _fallLinePaint
+      ..color = _candleStyle.fallWickColor
+      ..strokeWidth = _candleStyle.wickLineWidth;
+    _minMaxLinePaint
+      ..color = _chartStyle.highLowLineColor
+      ..strokeWidth = _chartStyle.highLowLineWidth;
+    _rulerPaint
+      ..color = _chartStyle.gridLineColor
+      ..strokeWidth = _chartStyle.gridLineWidth;
+    _currentPricePaint
+      ..color = _chartStyle.currentPriceLineColor
+      ..strokeWidth = _chartStyle.currentPriceLineWidth;
+    _currentPriceBgPaint.color = _chartStyle.currentPriceBackgroundColor;
+    _timeLinePaint
+      ..color = _chartStyle.timeLineColor
+      ..strokeWidth = _chartStyle.timeLineWidth;
+  }
+
   void _drawSubIndicatorRulerText(Canvas canvas, double height, double width,
       double top, double highest, double lowest, Size canvasSize) {
     // draw highest text
@@ -531,17 +575,12 @@ class KLinePainter extends CustomPainter {
   }
 
   /// draw Text in canvas
-  void _drawText(Canvas canvas, String text, Offset offset, {double? width}) {
+  void _drawText(Canvas canvas, String text, Offset offset,
+      {double? width, TextStyle? style}) {
     final painter = TextPainter(
         textDirection: TextDirection.ltr,
         maxLines: 1,
-        text: TextSpan(
-            text: text,
-            style: const TextStyle(
-              color: Color(0xff999999),
-              fontSize: 12.0,
-              height: 1.0,
-            )))
+        text: TextSpan(text: text, style: style ?? _chartStyle.rulerTextStyle))
       ..layout();
 
     double textWidth = painter.width;
@@ -561,13 +600,7 @@ class KLinePainter extends CustomPainter {
     final painter = TextPainter(
         textDirection: TextDirection.ltr,
         maxLines: 1,
-        text: TextSpan(
-            text: text,
-            style: const TextStyle(
-              color: Color(0xff666666),
-              fontSize: 13.0,
-              height: 0.0,
-            )))
+        text: TextSpan(text: text, style: _chartStyle.highLowTextStyle))
       ..layout();
 
     double textHeight = 15.0;
@@ -617,7 +650,8 @@ class KLinePainter extends CustomPainter {
         RRect.fromLTRBR(offset.dx - 1, offset.dy - 9, offset.dx + 56,
             offset.dy + 9, const Radius.circular(4)),
         _currentPricePaint);
-    _drawText(canvas, currentPrice, Offset(offset.dx + 3, offset.dy - 6));
+    _drawText(canvas, currentPrice, Offset(offset.dx + 3, offset.dy - 6),
+        style: _chartStyle.currentPriceTextStyle);
 
     // draw dotted line
     double startX = 0.0;
@@ -655,6 +689,10 @@ class KLinePainter extends CustomPainter {
   bool shouldRepaint(covariant KLinePainter oldDelegate) {
     return oldDelegate.klineData != klineData ||
         oldDelegate.beginIdx != beginIdx ||
+        oldDelegate._chartStyle != _chartStyle ||
+        oldDelegate._candleStyle != _candleStyle ||
+        oldDelegate._volumeStyle != _volumeStyle ||
+        !listEquals(oldDelegate._indicatorColors, _indicatorColors) ||
         oldDelegate._sarColor != _sarColor;
   }
 }

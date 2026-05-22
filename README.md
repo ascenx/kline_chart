@@ -144,6 +144,8 @@ controller.indicatorColors = [
 controller.sarColor = Colors.orange;
 ```
 
+For detailed style properties and examples, see [Style API](docs/style-api.md).
+
 ## Data Model
 
 Each candle is represented by `KLineData`.
@@ -172,7 +174,5 @@ flutter run
 
 ## Roadmap
 
-- More customization options.
 - Improved responsive behavior across screen sizes.
 - Continued performance optimization.
-- More detailed usage documentation.

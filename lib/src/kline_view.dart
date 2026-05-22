@@ -58,33 +58,6 @@ class _KLineViewState extends State<KLineView> {
     setState(() {});
   }
 
-  // void _klineDidZoom(ScaleUpdateDetails details) {
-  //   double scale = details.scale;
-  //   if (details.pointerCount != 2) {
-  //     return;
-  //   }
-  //
-  //   if (scale > 1.5) {
-  //     _currentScale = 1.5;
-  //   } else if (scale < 0.5) {
-  //     _currentScale = 0.5;
-  //   } else {
-  //     _currentScale = _previousScale * scale;
-  //   }
-  //
-  //   int count = KLineController.shared.itemCount + ((1 - _currentScale) * 4).ceil();
-  //
-  //   int maxCount = _dataLength > KLineController.shared.maxCount ? KLineController.shared.maxCount : _dataLength;
-  //   count = count > maxCount ? maxCount : count;
-  //   count = count < KLineController.shared.minCount ? KLineController.shared.minCount : count;
-  //   if (count + _beginIdx >= _dataLength) {
-  //     _beginIdx = (_dataLength - count).toDouble();
-  //   }
-  //   KLineController.shared.itemCount = count;
-  //   setState(() {
-  //   });
-  // }
-
   void _klineDidZoom(ScaleUpdateDetails details) {
     if (details.pointerCount != 2 || _viewportWidth <= 0) return;
 

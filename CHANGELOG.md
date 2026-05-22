@@ -1,5 +1,6 @@
 ## 0.0.1+4
 
+- Add grouped chart, candle, volume, crosshair, and info style customization.
 - Add configurable SAR point color.
 - Add SAR main chart indicator with configurable acceleration factors.
 - Add RSI and MACD sub indicators.

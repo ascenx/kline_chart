@@ -9,6 +9,7 @@ import 'package:kline_chart/src/indicators/indicator_line_painter.dart';
 import 'package:kline_chart/src/indicators/macd_painter.dart';
 import 'package:kline_chart/src/indicators/indicator_info_painter.dart';
 import 'package:kline_chart/src/indicators/sar_painter.dart';
+import 'package:kline_chart/src/indicators/vol_painter.dart';
 import 'package:kline_chart/src/kline_info_widget.dart';
 import 'package:kline_chart/src/kline_long_press_widget.dart';
 import 'package:kline_chart/src/kline_painter.dart';
@@ -19,11 +20,22 @@ void main() {
     KLineController.shared.itemCount = 30;
     KLineController.shared.spacing = 2.0;
     KLineController.shared.itemWidth = 0.0;
+    KLineController.shared.klineMargin = const EdgeInsets.all(0);
+    KLineController.shared.mainIndicatorInfoMargin = 5.0;
+    KLineController.shared.subIndicatorInfoMargin = 5.0;
+    KLineController.shared.indicatorSpacing = 10.0;
+    KLineController.shared.subIndicatorHeight = 50.0;
+    KLineController.shared.indicatorInfoHeight = 15.0;
     KLineController.shared.showMainIndicators = [IndicatorType.ma];
     KLineController.shared.showSubIndicators = [
       IndicatorType.vol,
       IndicatorType.kdj
     ];
+    KLineController.shared.chartStyle = const KLineChartStyle();
+    KLineController.shared.candleStyle = const KLineCandleStyle();
+    KLineController.shared.volumeStyle = const KLineVolumeStyle();
+    KLineController.shared.crosshairStyle = const KLineCrosshairStyle();
+    KLineController.shared.infoStyle = const KLineInfoStyle();
     KLineController.shared.sarStart = 0.02;
     KLineController.shared.sarIncrement = 0.02;
     KLineController.shared.sarMax = 0.2;
@@ -161,6 +173,59 @@ void main() {
       final newPainter = KLinePainter(const [], 10);
 
       expect(newPainter.shouldRepaint(oldPainter), isTrue);
+    });
+
+    test('repaints when chart style changes', () {
+      KLineController.shared.chartStyle = const KLineChartStyle(
+        backgroundColor: Color(0xff101820),
+      );
+      final oldPainter = KLinePainter(const [], 10);
+
+      KLineController.shared.chartStyle = const KLineChartStyle(
+        backgroundColor: Color(0xff202830),
+      );
+      final newPainter = KLinePainter(const [], 10);
+
+      expect(newPainter.shouldRepaint(oldPainter), isTrue);
+    });
+
+    test('uses chart and candle styles while painting the main chart',
+        () async {
+      KLineController.shared.itemCount = 1;
+      KLineController.shared.spacing = 0;
+      KLineController.shared.showMainIndicators = [];
+      KLineController.shared.showSubIndicators = [];
+      KLineController.shared.chartStyle = const KLineChartStyle(
+        backgroundColor: Color(0xff102030),
+        gridLineColor: Color(0xff405060),
+        gridLineWidth: 3,
+      );
+      KLineController.shared.candleStyle = const KLineCandleStyle(
+        riseColor: Color(0xff00aa55),
+        fallColor: Color(0xffcc3344),
+        riseWickColor: Color(0xff00aa55),
+        fallWickColor: Color(0xffcc3344),
+        wickLineWidth: 1,
+      );
+
+      final data = [
+        KLineData(
+          open: 10,
+          high: 11,
+          low: 9,
+          close: 10.5,
+          volume: 1,
+          time: 0,
+        )
+      ];
+      final bytes = await _paintToBytes(
+        Size(100, 100),
+        (canvas, size) => KLinePainter(data, 0).paint(canvas, size),
+      );
+
+      expect(_pixelAt(bytes, 13, 87, 100), const Color(0xff102030));
+      expect(_pixelAt(bytes, 20, 13, 100), const Color(0xff405060));
+      expect(_pixelAt(bytes, 50, 35, 100), const Color(0xff00aa55));
     });
 
     testWidgets('renders fractional trailing zoom window without overflow',
@@ -435,6 +500,103 @@ void main() {
     });
   });
 
+  group('Phase one visual customization', () {
+    test('uses configured volume colors for volume bars', () async {
+      KLineController.shared.itemCount = 1;
+      KLineController.shared.spacing = 0;
+      KLineController.shared.subIndicatorHeight = 100;
+      KLineController.shared.showSubIndicators = [IndicatorType.vol];
+      KLineController.shared.volumeStyle = const KLineVolumeStyle(
+        riseColor: Color(0xff22cc88),
+        fallColor: Color(0xffdd4455),
+      );
+
+      final data = [
+        KLineData(
+          open: 10,
+          high: 11,
+          low: 9,
+          close: 10.5,
+          volume: 1,
+          time: 0,
+        )
+      ];
+      final bytes = await _paintToBytes(
+        Size(100, 100),
+        (canvas, size) =>
+            VolPainter(data, 0).paint(canvas, size, 1, 0, showInfo: false),
+      );
+
+      expect(_pixelAt(bytes, 50, 50, 100), const Color(0xff22cc88));
+    });
+
+    test('uses configured crosshair style', () async {
+      KLineController.shared.crosshairStyle = const KLineCrosshairStyle(
+        color: Color(0xff8866ff),
+        strokeWidth: 3,
+      );
+
+      final bytes = await _paintToBytes(
+        Size(100, 100),
+        (canvas, size) => KLineLongPressPainter(
+          _buildKLineData(1),
+          0,
+          const Offset(10, 20),
+        ).paint(canvas, size),
+      );
+
+      expect(_pixelAt(bytes, 10, 50, 100), const Color(0xff8866ff));
+    });
+
+    testWidgets('uses configured long press info background', (tester) async {
+      final data = _buildKLineData(1);
+      KLineController.shared.itemWidth = 10;
+      KLineController.shared.spacing = 0;
+      KLineController.shared.longPressOffset.update(const Offset(5, 20));
+      KLineController.shared.infoStyle = const KLineInfoStyle(
+        backgroundColor: Color(0xff182430),
+        textStyle: TextStyle(
+          color: Color(0xffddeeff),
+          fontSize: 12,
+          height: 1,
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: KlineInfoWidget(data, 0),
+        ),
+      );
+
+      final container = tester.widget<Container>(find.byType(Container));
+      final decoration = container.decoration as BoxDecoration;
+
+      expect(decoration.color, const Color(0xff182430));
+    });
+
+    test('repaints long press info when info style changes', () {
+      final data = _buildKLineData(1).first;
+      final oldPainter = KLineLongPressInfoPainter(
+        data,
+        0,
+        const Offset(5, 20),
+        const KLineInfoStyle(
+          backgroundColor: Color(0xff182430),
+        ),
+      );
+      final newPainter = KLineLongPressInfoPainter(
+        data,
+        0,
+        const Offset(5, 20),
+        const KLineInfoStyle(
+          backgroundColor: Color(0xff283440),
+        ),
+      );
+
+      expect(newPainter.shouldRepaint(oldPainter), isTrue);
+    });
+  });
+
   group('Long press indicator', () {
     testWidgets('snaps the vertical line to the touched candle center',
         (tester) async {
@@ -695,4 +857,23 @@ Color _pixelAt(ByteData data, int x, int y, int width) {
     data.getUint8(offset + 1),
     data.getUint8(offset + 2),
   );
+}
+
+Future<ByteData> _paintToBytes(
+  Size size,
+  void Function(Canvas canvas, Size size) paint,
+) async {
+  final recorder = ui.PictureRecorder();
+  final canvas = Canvas(recorder);
+
+  paint(canvas, size);
+
+  final picture = recorder.endRecording();
+  final image = await picture.toImage(size.width.toInt(), size.height.toInt());
+  final data = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+
+  picture.dispose();
+  image.dispose();
+
+  return data!;
 }

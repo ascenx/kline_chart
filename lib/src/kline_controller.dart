@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import './kline_chart_style.dart';
 import './kline_data.dart';
 
 enum IndicatorType {
@@ -52,6 +53,12 @@ class KLineZoomResult {
 
 class KLineController {
   List<KLineData> data = [];
+
+  KLineChartStyle chartStyle = const KLineChartStyle();
+  KLineCandleStyle candleStyle = const KLineCandleStyle();
+  KLineVolumeStyle volumeStyle = const KLineVolumeStyle();
+  KLineCrosshairStyle crosshairStyle = const KLineCrosshairStyle();
+  KLineInfoStyle infoStyle = const KLineInfoStyle();
 
   bool isDebug = false;
   Color randomColor = Color.fromARGB(

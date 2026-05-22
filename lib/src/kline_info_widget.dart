@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import './kline_chart_style.dart';
 import './kline_controller.dart';
 import './kline_data.dart';
 
@@ -34,10 +35,11 @@ class KlineInfoWidget extends StatelessWidget {
                     borderRadius:
                         BorderRadius.circular(ctr.infoWidgetBorderRadius),
                     border: ctr.infoWidgetBorder,
-                    color: Colors.white.withValues(alpha: 0.8)),
+                    color: ctr.infoStyle.backgroundColor),
                 child: CustomPaint(
                   size: Size(ctr.infoWidgetMaxWidth ?? 120, 110),
-                  painter: KLineLongPressInfoPainter(data, beginIdx, offset),
+                  painter: KLineLongPressInfoPainter(
+                      data, beginIdx, offset, ctr.infoStyle),
                 ));
           } else {
             return const SizedBox.shrink();
@@ -53,9 +55,10 @@ class KLineLongPressInfoPainter extends CustomPainter {
   StreamSubscription? longPressSub;
 
   var longPressOffset = Offset.zero;
+  final KLineInfoStyle infoStyle;
 
-  KLineLongPressInfoPainter(
-      this.klineData, this.beginIdx, this.longPressOffset);
+  KLineLongPressInfoPainter(this.klineData, this.beginIdx, this.longPressOffset,
+      [this.infoStyle = const KLineInfoStyle()]);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -86,13 +89,7 @@ class KLineLongPressInfoPainter extends CustomPainter {
     final painter = TextPainter(
         textDirection: TextDirection.ltr,
         maxLines: 2,
-        text: TextSpan(
-            text: text,
-            style: const TextStyle(
-              color: Colors.blueGrey,
-              fontSize: 12.0,
-              height: 1.0,
-            )))
+        text: TextSpan(text: text, style: infoStyle.textStyle))
       ..layout(maxWidth: width ?? canvasSize.width);
 
     // double textWidth = painter.width;
@@ -101,6 +98,7 @@ class KLineLongPressInfoPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant KLineLongPressInfoPainter oldDelegate) {
-    return klineData != oldDelegate.klineData;
+    return klineData != oldDelegate.klineData ||
+        infoStyle != oldDelegate.infoStyle;
   }
 }
