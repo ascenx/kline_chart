@@ -84,6 +84,7 @@ class KLineIndicatorInfoPainter extends CustomPainter {
         result.data,
         const [0],
         _config.klineTop,
+        lineColors: [_config.sarColor],
         selectedIndex: selectedIndex,
       );
     }
@@ -202,6 +203,7 @@ class _IndicatorInfoConfig {
   final double sarStart;
   final double sarIncrement;
   final double sarMax;
+  final Color sarColor;
   final double subIndicatorHeight;
   final double indicatorSpacing;
   final double klineTop;
@@ -222,6 +224,7 @@ class _IndicatorInfoConfig {
     required this.sarStart,
     required this.sarIncrement,
     required this.sarMax,
+    required this.sarColor,
     required this.subIndicatorHeight,
     required this.indicatorSpacing,
     required this.klineTop,
@@ -244,6 +247,7 @@ class _IndicatorInfoConfig {
       sarStart: controller.sarStart,
       sarIncrement: controller.sarIncrement,
       sarMax: controller.sarMax,
+      sarColor: controller.sarColor,
       subIndicatorHeight: controller.subIndicatorHeight,
       indicatorSpacing: controller.indicatorSpacing,
       klineTop: controller.klineMargin.top,
@@ -284,6 +288,7 @@ class _IndicatorInfoConfig {
             other.sarStart == sarStart &&
             other.sarIncrement == sarIncrement &&
             other.sarMax == sarMax &&
+            other.sarColor == sarColor &&
             other.subIndicatorHeight == subIndicatorHeight &&
             other.indicatorSpacing == indicatorSpacing &&
             other.klineTop == klineTop &&
@@ -307,6 +312,7 @@ class _IndicatorInfoConfig {
       sarStart,
       sarIncrement,
       sarMax,
+      sarColor,
       subIndicatorHeight,
       indicatorSpacing,
       klineTop,

@@ -112,6 +112,7 @@ controller.bollBandwidth = 2;
 controller.sarStart = 0.02;
 controller.sarIncrement = 0.02;
 controller.sarMax = 0.2;
+controller.sarColor = Colors.orange;
 ```
 
 Available indicator types:
@@ -140,6 +141,7 @@ controller.indicatorColors = [
   Colors.purple,
   Colors.blue,
 ];
+controller.sarColor = Colors.orange;
 ```
 
 ## Data Model

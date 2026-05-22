@@ -13,8 +13,10 @@ import './kline_data.dart';
 class KLinePainter extends CustomPainter {
   final List<KLineData> klineData;
   final double beginIdx;
+  final Color _sarColor;
 
-  KLinePainter(this.klineData, this.beginIdx);
+  KLinePainter(this.klineData, this.beginIdx)
+      : _sarColor = KLineController.shared.sarColor;
 
   final _riseRectPaint = Paint()
     ..style = PaintingStyle.fill
@@ -428,7 +430,7 @@ class KLinePainter extends CustomPainter {
         highest,
         lowest,
         top: KLineController.shared.klineMargin.top,
-        lineColors: KLineController.shared.indicatorColors,
+        pointColor: _sarColor,
       );
     }
 
@@ -652,6 +654,7 @@ class KLinePainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant KLinePainter oldDelegate) {
     return oldDelegate.klineData != klineData ||
-        oldDelegate.beginIdx != beginIdx;
+        oldDelegate.beginIdx != beginIdx ||
+        oldDelegate._sarColor != _sarColor;
   }
 }

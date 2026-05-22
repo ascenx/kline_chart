@@ -1,3 +1,6 @@
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kline_chart/kline_chart.dart';
@@ -5,6 +8,7 @@ import 'package:kline_chart/src/indicators/indicator_data_handler.dart';
 import 'package:kline_chart/src/indicators/indicator_line_painter.dart';
 import 'package:kline_chart/src/indicators/macd_painter.dart';
 import 'package:kline_chart/src/indicators/indicator_info_painter.dart';
+import 'package:kline_chart/src/indicators/sar_painter.dart';
 import 'package:kline_chart/src/kline_info_widget.dart';
 import 'package:kline_chart/src/kline_long_press_widget.dart';
 import 'package:kline_chart/src/kline_painter.dart';
@@ -23,6 +27,7 @@ void main() {
     KLineController.shared.sarStart = 0.02;
     KLineController.shared.sarIncrement = 0.02;
     KLineController.shared.sarMax = 0.2;
+    KLineController.shared.sarColor = Colors.orange;
     KLineController.shared.showTimeChart = false;
     KLineController.shared.longPressOffset.update(Offset.zero);
   });
@@ -146,6 +151,16 @@ void main() {
       painter.removeListener(listener);
 
       expect(didRepaint, isFalse);
+    });
+
+    test('repaints when SAR color changes', () {
+      KLineController.shared.sarColor = Colors.orange;
+      final oldPainter = KLinePainter(const [], 10);
+
+      KLineController.shared.sarColor = Colors.cyan;
+      final newPainter = KLinePainter(const [], 10);
+
+      expect(newPainter.shouldRepaint(oldPainter), isTrue);
     });
 
     testWidgets('renders fractional trailing zoom window without overflow',
@@ -390,6 +405,34 @@ void main() {
 
       expect(tester.takeException(), isNull);
     });
+
+    test('uses the configured SAR point color', () async {
+      KLineController.shared.itemCount = 10;
+      KLineController.shared.sarColor = Colors.cyan;
+
+      final recorder = ui.PictureRecorder();
+      final canvas = Canvas(recorder);
+
+      SARPainter([
+        [10]
+      ]).paint(
+        canvas,
+        const Size(100, 100),
+        80,
+        0,
+        10,
+        0,
+      );
+
+      final picture = recorder.endRecording();
+      final image = await picture.toImage(100, 100);
+      final data = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+
+      picture.dispose();
+      image.dispose();
+
+      expect(_pixelAt(data!, 4, 20, 100), const Color(0xff00bcd4));
+    });
   });
 
   group('Long press indicator', () {
@@ -587,6 +630,18 @@ void main() {
 
       expect(newPainter.shouldRepaint(oldPainter), isTrue);
     });
+
+    test('repaints the indicator info overlay when SAR color changes', () {
+      final data = _buildKLineData(20);
+      KLineController.shared.showMainIndicators = [IndicatorType.sar];
+      KLineController.shared.sarColor = Colors.orange;
+      final oldPainter = KLineIndicatorInfoPainter(data, 10);
+
+      KLineController.shared.sarColor = Colors.cyan;
+      final newPainter = KLineIndicatorInfoPainter(data, 10);
+
+      expect(newPainter.shouldRepaint(oldPainter), isTrue);
+    });
   });
 }
 
@@ -630,4 +685,14 @@ List<KLineData> _buildKLineDataFromOhlc(List<List<double>> rows) {
       time: index,
     );
   });
+}
+
+Color _pixelAt(ByteData data, int x, int y, int width) {
+  final offset = (y * width + x) * 4;
+  return Color.fromARGB(
+    data.getUint8(offset + 3),
+    data.getUint8(offset),
+    data.getUint8(offset + 1),
+    data.getUint8(offset + 2),
+  );
 }

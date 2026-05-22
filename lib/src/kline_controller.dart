@@ -136,6 +136,9 @@ class KLineController {
   /// SAR maximum acceleration factor
   double sarMax = 0.2;
 
+  /// SAR point color
+  Color sarColor = Colors.orange;
+
   /// VOL MA periods
   List<int> volMaPeriods = [7, 14];
 

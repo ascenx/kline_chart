@@ -17,13 +17,11 @@ class SARPainter {
     double maxValue,
     double minValue, {
     double top = 0.0,
+    Color? pointColor,
     List<Color> lineColors = const [],
   }) {
     if (dataList.isEmpty || dataList.first.isEmpty) {
       return;
-    }
-    if (lineColors.isEmpty) {
-      lineColors = KLineController.shared.indicatorColors;
     }
 
     final values = dataList.first;
@@ -35,9 +33,13 @@ class SARPainter {
         KLineController.shared.indicatorInfoHeight +
         KLineController.shared.mainIndicatorInfoMargin;
     final radius = max(1.5, min(4.0, itemW * 0.25));
+    final resolvedPointColor = pointColor ??
+        (lineColors.isNotEmpty
+            ? lineColors.first
+            : KLineController.shared.sarColor);
     final paint = Paint()
       ..style = PaintingStyle.fill
-      ..color = lineColors.isEmpty ? const Color(0xff333333) : lineColors.first
+      ..color = resolvedPointColor
       ..isAntiAlias = true;
 
     for (int i = 0; i < values.length; ++i) {
