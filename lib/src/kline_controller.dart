@@ -7,7 +7,7 @@ enum IndicatorType {
   ma(name: "MA"),
   ema(name: "EMA"),
   boll(name: "BOLL"),
-  // sar(name: 'SAR'),
+  sar(name: 'SAR', isLine: false),
 
   // sub
   vol(name: "VOL", isLine: false),
@@ -126,6 +126,15 @@ class KLineController {
 
   /// BOLL Bandwidth (P)
   int bollBandwidth = 2;
+
+  /// SAR acceleration factor start value
+  double sarStart = 0.02;
+
+  /// SAR acceleration factor step value
+  double sarIncrement = 0.02;
+
+  /// SAR maximum acceleration factor
+  double sarMax = 0.2;
 
   /// VOL MA periods
   List<int> volMaPeriods = [7, 14];

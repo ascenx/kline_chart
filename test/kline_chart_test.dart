@@ -20,6 +20,9 @@ void main() {
       IndicatorType.vol,
       IndicatorType.kdj
     ];
+    KLineController.shared.sarStart = 0.02;
+    KLineController.shared.sarIncrement = 0.02;
+    KLineController.shared.sarMax = 0.2;
     KLineController.shared.showTimeChart = false;
     KLineController.shared.longPressOffset.update(Offset.zero);
   });
@@ -312,6 +315,41 @@ void main() {
     });
   });
 
+  group('IndicatorDataHandler.sar', () {
+    test('calculates parabolic SAR values with default acceleration factors',
+        () {
+      KLineController.shared.itemCount = 10;
+      final data = _buildKLineDataFromOhlc([
+        [9, 10, 8, 9],
+        [10, 11, 9, 10],
+        [11, 12, 10, 11],
+        [12, 13, 11, 12],
+        [13, 14, 12, 13],
+        [14, 15, 13, 14],
+        [13, 14, 10, 11],
+        [10, 13, 9, 10],
+        [9, 12, 8, 9],
+        [8, 11, 7, 8],
+      ]);
+
+      final result = IndicatorDataHandler.sar(data, 0);
+      final sar = result.data.single;
+
+      expect(sar[0], -1);
+      expect(sar[1], closeTo(8, 0.000001));
+      expect(sar[2], closeTo(8, 0.000001));
+      expect(sar[3], closeTo(8.16, 0.000001));
+      expect(sar[4], closeTo(8.4504, 0.000001));
+      expect(sar[5], closeTo(8.894368, 0.000001));
+      expect(sar[6], closeTo(9.5049312, 0.000001));
+      expect(sar[7], closeTo(15, 0.000001));
+      expect(sar[8], closeTo(14.88, 0.000001));
+      expect(sar[9], closeTo(14.6048, 0.000001));
+      expect(result.maxValue, closeTo(15, 0.000001));
+      expect(result.minValue, closeTo(8, 0.000001));
+    });
+  });
+
   group('MACD sub indicator rendering', () {
     testWidgets('renders MACD as histogram with signal lines', (tester) async {
       KLineController.shared.data = _buildKLineData(40);
@@ -330,6 +368,20 @@ void main() {
     testWidgets('renders RSI as a line sub indicator', (tester) async {
       KLineController.shared.data = _buildKLineData(40);
       KLineController.shared.showSubIndicators = [IndicatorType.rsi];
+
+      await tester.pumpWidget(MaterialApp(
+        home: SizedBox(width: 300, height: 240, child: KLineView()),
+      ));
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('SAR main indicator rendering', () {
+    testWidgets('renders SAR as a main chart indicator', (tester) async {
+      KLineController.shared.data = _buildKLineData(40);
+      KLineController.shared.showMainIndicators = [IndicatorType.sar];
 
       await tester.pumpWidget(MaterialApp(
         home: SizedBox(width: 300, height: 240, child: KLineView()),
@@ -474,6 +526,19 @@ void main() {
       expect(MACDPainter.infoValueText([-1, -0.25], 4), 'NaN');
     });
 
+    test('shows the selected SAR value without a period label', () {
+      final infoList = IndicatorLinePainter.indicatorInfoList(
+        IndicatorType.sar,
+        [
+          [-1, 8.25]
+        ],
+        [0],
+        1,
+      );
+
+      expect(infoList, ['SAR: 8.25']);
+    });
+
     test('repaints the indicator info overlay when long press moves', () {
       final painter = KLineIndicatorInfoPainter(_buildKLineData(20), 10);
       bool didRepaint = false;
@@ -510,6 +575,18 @@ void main() {
 
       expect(newPainter.shouldRepaint(oldPainter), isTrue);
     });
+
+    test('repaints the indicator info overlay when SAR parameters change', () {
+      final data = _buildKLineData(20);
+      KLineController.shared.showMainIndicators = [IndicatorType.sar];
+      KLineController.shared.sarIncrement = 0.02;
+      final oldPainter = KLineIndicatorInfoPainter(data, 10);
+
+      KLineController.shared.sarIncrement = 0.04;
+      final newPainter = KLineIndicatorInfoPainter(data, 10);
+
+      expect(newPainter.shouldRepaint(oldPainter), isTrue);
+    });
   });
 }
 
@@ -535,6 +612,20 @@ List<KLineData> _buildKLineDataFromCloses(List<double> closes) {
       high: close + 1,
       low: close - 1,
       close: close,
+      volume: 100.0 + index,
+      time: index,
+    );
+  });
+}
+
+List<KLineData> _buildKLineDataFromOhlc(List<List<double>> rows) {
+  return List.generate(rows.length, (index) {
+    final row = rows[index];
+    return KLineData(
+      open: row[0],
+      high: row[1],
+      low: row[2],
+      close: row[3],
       volume: 100.0 + index,
       time: index,
     );

@@ -3,7 +3,7 @@
 [![pub package](https://img.shields.io/pub/v/kline_chart?style=flat)](https://pub.dev/packages/kline_chart)
 [![license](https://img.shields.io/github/license/AscenX/kline_chart?style=flat)](https://github.com/AscenX/kline_chart)
 
-KLine Chart is a lightweight Flutter charting library for building interactive financial candlestick charts. It supports common technical indicators such as MA, EMA, BOLL, VOL, MACD, KDJ, RSI, WR, and OBV, along with smooth scrolling, zooming, long-press crosshair interaction, and detailed price/indicator overlays.
+KLine Chart is a lightweight Flutter charting library for building interactive financial candlestick charts. It supports common technical indicators such as MA, EMA, BOLL, SAR, VOL, MACD, KDJ, RSI, WR, and OBV, along with smooth scrolling, zooming, long-press crosshair interaction, and detailed price/indicator overlays.
 
 It is designed for crypto, stock, and trading-related apps that need a customizable, responsive K-line chart component.
 
@@ -16,7 +16,7 @@ It is designed for crypto, stock, and trading-related apps that need a customiza
 - Candlestick and time chart modes.
 - Smooth horizontal scrolling and pinch-to-zoom.
 - Long-press crosshair with candle detail overlay.
-- Main indicators: MA, EMA, BOLL.
+- Main indicators: MA, EMA, BOLL, SAR.
 - Sub indicators: VOL, MACD, KDJ, RSI, WR, OBV.
 - Configurable indicator periods, colors, spacing, and visible item count.
 - Rendering stability for short data sets, flat price data, and zero volume data.
@@ -109,13 +109,16 @@ controller.rsiPeriods = [6, 12, 24];
 controller.wrPeriods = [7, 14];
 controller.bollPeriod = 21;
 controller.bollBandwidth = 2;
+controller.sarStart = 0.02;
+controller.sarIncrement = 0.02;
+controller.sarMax = 0.2;
 ```
 
 Available indicator types:
 
 | Area | Indicators |
 | --- | --- |
-| Main chart | `ma`, `ema`, `boll` |
+| Main chart | `ma`, `ema`, `boll`, `sar` |
 | Sub chart | `vol`, `macd`, `kdj`, `rsi`, `wr`, `obv` |
 
 ## Chart Configuration
@@ -167,7 +170,6 @@ flutter run
 
 ## Roadmap
 
-- SAR indicator.
 - More customization options.
 - Improved responsive behavior across screen sizes.
 - Continued performance optimization.

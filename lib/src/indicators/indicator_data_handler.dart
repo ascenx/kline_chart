@@ -176,6 +176,91 @@ class IndicatorDataHandler {
     return IndicatorResult([mbList, upList, dnList], maxValue, minValue);
   }
 
+  static IndicatorResult sar(List<KLineData> klineData, double beginIdx) {
+    if (klineData.length < 2) {
+      return IndicatorResult.empty;
+    }
+
+    final controller = KLineController.shared;
+    final startAf = controller.sarStart;
+    final incrementAf = controller.sarIncrement;
+    final maxAf = controller.sarMax;
+    if (startAf <= 0 || incrementAf <= 0 || maxAf <= 0) {
+      return IndicatorResult.empty;
+    }
+
+    final values = List<double>.filled(klineData.length, -1.0);
+    bool isRising = klineData[1].close >= klineData[0].close;
+    double sar = isRising
+        ? min(klineData[0].low, klineData[1].low)
+        : max(klineData[0].high, klineData[1].high);
+    double extremePoint = isRising
+        ? max(klineData[0].high, klineData[1].high)
+        : min(klineData[0].low, klineData[1].low);
+    double accelerationFactor = startAf;
+    values[1] = sar;
+
+    for (int i = 2; i < klineData.length; ++i) {
+      sar = sar + accelerationFactor * (extremePoint - sar);
+
+      if (isRising) {
+        sar = min(sar, min(klineData[i - 1].low, klineData[i - 2].low));
+        if (klineData[i].low < sar) {
+          isRising = false;
+          sar = extremePoint;
+          extremePoint = klineData[i].low;
+          accelerationFactor = startAf;
+        } else if (klineData[i].high > extremePoint) {
+          extremePoint = klineData[i].high;
+          accelerationFactor = min(accelerationFactor + incrementAf, maxAf);
+        }
+      } else {
+        sar = max(sar, max(klineData[i - 1].high, klineData[i - 2].high));
+        if (klineData[i].high > sar) {
+          isRising = true;
+          sar = extremePoint;
+          extremePoint = klineData[i].high;
+          accelerationFactor = startAf;
+        } else if (klineData[i].low < extremePoint) {
+          extremePoint = klineData[i].low;
+          accelerationFactor = min(accelerationFactor + incrementAf, maxAf);
+        }
+      }
+
+      values[i] = sar;
+    }
+
+    final start = _visibleStart(beginIdx);
+    final end = _visibleEnd(klineData, beginIdx);
+    final visibleValues = start < end ? values.sublist(start, end) : <double>[];
+    if (visibleValues.isEmpty) {
+      return IndicatorResult.empty;
+    }
+
+    double maxValue = 0.0;
+    double minValue = 0.0;
+    bool hasVisibleValue = false;
+    for (final value in visibleValues) {
+      if (value < 0) {
+        continue;
+      }
+      if (!hasVisibleValue) {
+        maxValue = value;
+        minValue = value;
+        hasVisibleValue = true;
+      } else {
+        maxValue = max(maxValue, value);
+        minValue = min(minValue, value);
+      }
+    }
+
+    return IndicatorResult(
+      [visibleValues],
+      hasVisibleValue ? maxValue : 0.0,
+      hasVisibleValue ? minValue : 0.0,
+    );
+  }
+
   static IndicatorResult macd(
       List<KLineData> klineData, List<int> periods, double beginIdx) {
     if (klineData.isEmpty ||

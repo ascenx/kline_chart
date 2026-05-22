@@ -179,7 +179,7 @@ class IndicatorLinePainter {
           infoList.add("J $valueText");
         }
       } else {
-        if (type == IndicatorType.obv) {
+        if (type == IndicatorType.obv || type == IndicatorType.sar) {
           infoList.add("${type.name}: $valueText");
         } else {
           infoList.add("${type.name}($period): $valueText");

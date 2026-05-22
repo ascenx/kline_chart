@@ -1,5 +1,6 @@
 ## 0.0.1+4
 
+- Add SAR main chart indicator with configurable acceleration factors.
 - Add RSI and MACD sub indicators.
 - Add MACD histogram rendering with signal lines.
 - Improve long-press candle selection and crosshair alignment.

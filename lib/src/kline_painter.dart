@@ -6,6 +6,7 @@ import './indicators/indicator_result.dart';
 import './kline_controller.dart';
 import './indicators/indicator_line_painter.dart';
 import './indicators/macd_painter.dart';
+import './indicators/sar_painter.dart';
 import './indicators/vol_painter.dart';
 import './kline_data.dart';
 
@@ -167,6 +168,7 @@ class KLinePainter extends CustomPainter {
     double mainHighest = highest, mainLowest = lowest;
 
     List<List<double>> mainIndicatorData = [];
+    List<List<double>> sarIndicatorData = [];
     bool isShowMA =
         KLineController.shared.showMainIndicators.contains(IndicatorType.ma);
     bool isShowEMA =
@@ -188,6 +190,22 @@ class KLinePainter extends CustomPainter {
       }
       if (mainIndicatorMin < lowest && mainIndicatorMin != 0.0) {
         lowest = mainIndicatorMin;
+      }
+    }
+
+    bool isShowSAR =
+        KLineController.shared.showMainIndicators.contains(IndicatorType.sar);
+    if (isShowSAR) {
+      final res = IndicatorDataHandler.sar(klineData, beginIdx);
+      sarIndicatorData = res.data;
+      final sarMax = res.maxValue;
+      final sarMin = res.minValue;
+
+      if (sarMax > highest) {
+        highest = sarMax;
+      }
+      if (sarMin < lowest && sarMin != 0.0) {
+        lowest = sarMin;
       }
     }
 
@@ -399,6 +417,19 @@ class KLinePainter extends CustomPainter {
           lowest,
           top: KLineController.shared.klineMargin.top,
           showInfo: false);
+    }
+
+    if (isShowSAR) {
+      SARPainter(sarIndicatorData).paint(
+        canvas,
+        size,
+        mainHeight,
+        slideOffset,
+        highest,
+        lowest,
+        top: KLineController.shared.klineMargin.top,
+        lineColors: KLineController.shared.indicatorColors,
+      );
     }
 
     // draw sub indicator

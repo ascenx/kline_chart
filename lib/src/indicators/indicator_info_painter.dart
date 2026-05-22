@@ -73,6 +73,20 @@ class KLineIndicatorInfoPainter extends CustomPainter {
         selectedIndex: selectedIndex,
       );
     }
+
+    final isShowSAR = showMainIndicators.contains(IndicatorType.sar);
+    if (isShowSAR) {
+      final result = _indicatorResult(IndicatorType.sar);
+      IndicatorLinePainter.paintInfo(
+        canvas,
+        size,
+        IndicatorType.sar,
+        result.data,
+        const [0],
+        _config.klineTop,
+        selectedIndex: selectedIndex,
+      );
+    }
   }
 
   void _paintSubIndicatorInfo(Canvas canvas, Size size, int? selectedIndex) {
@@ -151,6 +165,8 @@ class KLineIndicatorInfoPainter extends CustomPainter {
     } else if (type == IndicatorType.macd) {
       return IndicatorDataHandler.macd(
           klineData, _config.macdPeriods, beginIdx);
+    } else if (type == IndicatorType.sar) {
+      return IndicatorDataHandler.sar(klineData, beginIdx);
     }
     if (type == IndicatorType.kdj) {
       return IndicatorDataHandler.kdj(klineData, _config.kdjPeriods, beginIdx);
@@ -183,6 +199,9 @@ class _IndicatorInfoConfig {
   final List<Color> indicatorColors;
   final int bollPeriod;
   final int bollBandwidth;
+  final double sarStart;
+  final double sarIncrement;
+  final double sarMax;
   final double subIndicatorHeight;
   final double indicatorSpacing;
   final double klineTop;
@@ -200,6 +219,9 @@ class _IndicatorInfoConfig {
     required this.indicatorColors,
     required this.bollPeriod,
     required this.bollBandwidth,
+    required this.sarStart,
+    required this.sarIncrement,
+    required this.sarMax,
     required this.subIndicatorHeight,
     required this.indicatorSpacing,
     required this.klineTop,
@@ -219,6 +241,9 @@ class _IndicatorInfoConfig {
       indicatorColors: List<Color>.of(controller.indicatorColors),
       bollPeriod: controller.bollPeriod,
       bollBandwidth: controller.bollBandwidth,
+      sarStart: controller.sarStart,
+      sarIncrement: controller.sarIncrement,
+      sarMax: controller.sarMax,
       subIndicatorHeight: controller.subIndicatorHeight,
       indicatorSpacing: controller.indicatorSpacing,
       klineTop: controller.klineMargin.top,
@@ -256,6 +281,9 @@ class _IndicatorInfoConfig {
             listEquals(other.indicatorColors, indicatorColors) &&
             other.bollPeriod == bollPeriod &&
             other.bollBandwidth == bollBandwidth &&
+            other.sarStart == sarStart &&
+            other.sarIncrement == sarIncrement &&
+            other.sarMax == sarMax &&
             other.subIndicatorHeight == subIndicatorHeight &&
             other.indicatorSpacing == indicatorSpacing &&
             other.klineTop == klineTop &&
@@ -276,6 +304,9 @@ class _IndicatorInfoConfig {
       Object.hashAll(indicatorColors),
       bollPeriod,
       bollBandwidth,
+      sarStart,
+      sarIncrement,
+      sarMax,
       subIndicatorHeight,
       indicatorSpacing,
       klineTop,
