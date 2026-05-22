@@ -17,7 +17,13 @@ class KlineInfoWidget extends StatelessWidget {
         valueListenable: KLineController.shared.longPressOffset,
         builder: (ctx, offset, child) {
           double offsetX = offset.dx;
-          int index = (offsetX / (ctr.itemWidth + ctr.spacing) + beginIdx).ceil();
+          int index = KLineController.dataIndexForLocalX(
+            localX: offsetX,
+            beginIndex: beginIdx,
+            itemWidth: ctr.itemWidth,
+            spacing: ctr.spacing,
+            dataLength: klineData.length,
+          );
           if (offsetX != 0.0 && index >= 0 && index < klineData.length) {
             KLineData data = klineData[index];
             return Container(
@@ -25,7 +31,8 @@ class KlineInfoWidget extends StatelessWidget {
                 margin: ctr.infoWidgetMargin,
                 padding: ctr.infoWidgetPadding,
                 decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(ctr.infoWidgetBorderRadius),
+                    borderRadius:
+                        BorderRadius.circular(ctr.infoWidgetBorderRadius),
                     border: ctr.infoWidgetBorder,
                     color: Colors.white.withValues(alpha: 0.8)),
                 child: CustomPaint(
@@ -47,7 +54,8 @@ class KLineLongPressInfoPainter extends CustomPainter {
 
   var longPressOffset = Offset.zero;
 
-  KLineLongPressInfoPainter(this.klineData, this.beginIdx, this.longPressOffset);
+  KLineLongPressInfoPainter(
+      this.klineData, this.beginIdx, this.longPressOffset);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -55,16 +63,26 @@ class KLineLongPressInfoPainter extends CustomPainter {
     double topPadding = KLineController.shared.infoWidgetPadding.top;
     double fontHeight = 14;
 
-    drawText(canvas, 'time:${DateTime.fromMillisecondsSinceEpoch(klineData.time).toString()}', Offset(leftPadding, topPadding), size,
+    drawText(
+        canvas,
+        'time:${DateTime.fromMillisecondsSinceEpoch(klineData.time).toString()}',
+        Offset(leftPadding, topPadding),
+        size,
         width: size.width);
-    drawText(canvas, 'high:${klineData.high.toStringAsFixed(2)}', Offset(leftPadding, topPadding + fontHeight * 2), size);
-    drawText(canvas, 'open:${klineData.open.toStringAsFixed(2)}', Offset(leftPadding, topPadding + fontHeight * 3), size);
-    drawText(canvas, 'low:${klineData.low.toStringAsFixed(2)}', Offset(leftPadding, topPadding + fontHeight * 4), size);
-    drawText(canvas, 'close:${klineData.close.toStringAsFixed(2)}', Offset(leftPadding, topPadding + fontHeight * 5), size);
-    drawText(canvas, 'volume:${klineData.volume.toStringAsFixed(2)}', Offset(leftPadding, topPadding + fontHeight * 6), size);
+    drawText(canvas, 'high:${klineData.high.toStringAsFixed(2)}',
+        Offset(leftPadding, topPadding + fontHeight * 2), size);
+    drawText(canvas, 'open:${klineData.open.toStringAsFixed(2)}',
+        Offset(leftPadding, topPadding + fontHeight * 3), size);
+    drawText(canvas, 'low:${klineData.low.toStringAsFixed(2)}',
+        Offset(leftPadding, topPadding + fontHeight * 4), size);
+    drawText(canvas, 'close:${klineData.close.toStringAsFixed(2)}',
+        Offset(leftPadding, topPadding + fontHeight * 5), size);
+    drawText(canvas, 'volume:${klineData.volume.toStringAsFixed(2)}',
+        Offset(leftPadding, topPadding + fontHeight * 6), size);
   }
 
-  void drawText(Canvas canvas, String text, Offset offset, Size canvasSize, {double? width}) {
+  void drawText(Canvas canvas, String text, Offset offset, Size canvasSize,
+      {double? width}) {
     final painter = TextPainter(
         textDirection: TextDirection.ltr,
         maxLines: 2,

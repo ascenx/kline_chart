@@ -110,9 +110,8 @@ class KLineController {
   /// indicator information height
   double indicatorInfoHeight = 15.0;
 
-  // 主指标的展示高度 = 总高度 - 上下间距(klineMargin.vertical) - 副指标的高度 - 指标之间的间距高度
-  // 副指标的展示高度 = 副指标的高度 - 指标信息的高度
-
+  // Main indicator height = totalHeight - klineMargin.vertical - subIndicatorHeight - indicatorMargin
+  
   /// show main indicator
   List<IndicatorType> showMainIndicators = [IndicatorType.ma];
 
@@ -135,7 +134,7 @@ class KLineController {
   List<int> kdjPeriods = [9, 3, 3];
 
   /// RSI periods
-  List<int> rsiPeriods = [6];
+  List<int> rsiPeriods = [6, 12, 24];
 
   /// WR periods
   List<int> wrPeriods = [7, 14];
@@ -163,6 +162,31 @@ class KLineController {
     double itemW = totalWidth / itemCount - spacing;
     KLineController.shared.itemWidth = itemW;
     return itemW;
+  }
+
+  static int dataIndexForLocalX({
+    required double localX,
+    required double beginIndex,
+    required double itemWidth,
+    required double spacing,
+    required int dataLength,
+  }) {
+    double itemExtent = itemWidth + spacing;
+    if (dataLength <= 0 || itemExtent <= 0) return 0;
+
+    int index = ((localX - itemWidth * 0.5) / itemExtent + beginIndex).round();
+    if (index < 0) return 0;
+    if (index >= dataLength) return dataLength - 1;
+    return index;
+  }
+
+  static double itemCenterXForDataIndex({
+    required int dataIndex,
+    required double beginIndex,
+    required double itemWidth,
+    required double spacing,
+  }) {
+    return (dataIndex - beginIndex) * (itemWidth + spacing) + itemWidth * 0.5;
   }
 
   static double beginIndexForScrollOffset({

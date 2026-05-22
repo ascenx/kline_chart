@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kline_chart/kline_chart.dart';
 import 'package:kline_chart/src/indicators/indicator_data_handler.dart';
+import 'package:kline_chart/src/kline_info_widget.dart';
+import 'package:kline_chart/src/kline_long_press_widget.dart';
 import 'package:kline_chart/src/kline_painter.dart';
 
 void main() {
@@ -269,6 +271,49 @@ void main() {
       await tester.pump();
 
       expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('Long press indicator', () {
+    testWidgets('snaps the vertical line to the touched candle center',
+        (tester) async {
+      final data = _buildKLineData(20);
+      KLineController.shared.itemWidth = 8;
+      KLineController.shared.spacing = 2;
+      KLineController.shared.longPressOffset.update(const Offset(34, 80));
+
+      await tester.pumpWidget(Directionality(
+        textDirection: TextDirection.ltr,
+        child: SizedBox(
+          width: 200,
+          height: 160,
+          child: KlineLongPressWidget(data, 10),
+        ),
+      ));
+
+      final customPaint = tester.widget<CustomPaint>(find.byType(CustomPaint));
+      final painter = customPaint.foregroundPainter as KLineLongPressPainter;
+
+      expect(painter.longPressOffset.dx, 34);
+      expect(painter.longPressOffset.dy, 80);
+    });
+
+    testWidgets('shows info for the same candle selected by the vertical line',
+        (tester) async {
+      final data = _buildKLineData(20);
+      KLineController.shared.itemWidth = 8;
+      KLineController.shared.spacing = 2;
+      KLineController.shared.longPressOffset.update(const Offset(34, 80));
+
+      await tester.pumpWidget(Directionality(
+        textDirection: TextDirection.ltr,
+        child: KlineInfoWidget(data, 10),
+      ));
+
+      final customPaint = tester.widget<CustomPaint>(find.byType(CustomPaint));
+      final painter = customPaint.painter as KLineLongPressInfoPainter;
+
+      expect(painter.klineData, same(data[13]));
     });
   });
 }

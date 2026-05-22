@@ -13,11 +13,19 @@ class KlineLongPressWidget extends StatelessWidget {
   Offset _convertToItemOffset(Offset offset) {
     double itemW = KLineController.shared.itemWidth;
     double spacing = KLineController.shared.spacing;
-    double itemSpacingWidth = itemW + spacing;
-    int index = (offset.dx / itemSpacingWidth).ceil() - 1;
-    double indexOffset = beginIdx - beginIdx.ceil();
-    double slideOffset = -indexOffset * itemSpacingWidth;
-    double itemOffsetX = index * itemSpacingWidth - itemW * 0.5 + slideOffset;
+    int index = KLineController.dataIndexForLocalX(
+      localX: offset.dx,
+      beginIndex: beginIdx,
+      itemWidth: itemW,
+      spacing: spacing,
+      dataLength: klineData.length,
+    );
+    double itemOffsetX = KLineController.itemCenterXForDataIndex(
+      dataIndex: index,
+      beginIndex: beginIdx,
+      itemWidth: itemW,
+      spacing: spacing,
+    );
     return Offset(itemOffsetX, offset.dy);
   }
 
@@ -29,7 +37,8 @@ class KlineLongPressWidget extends StatelessWidget {
           if (offset == Offset.zero) return const SizedBox.shrink();
           Offset itemOffset = _convertToItemOffset(offset);
           return CustomPaint(
-            foregroundPainter: KLineLongPressPainter(klineData, beginIdx, itemOffset),
+            foregroundPainter:
+                KLineLongPressPainter(klineData, beginIdx, itemOffset),
           );
         });
   }
@@ -56,13 +65,16 @@ class KLineLongPressPainter extends CustomPainter {
     if (klineData.isEmpty) return;
 
     // draw vertical line
-    canvas.drawLine(Offset(longPressOffset.dx, 0), Offset(longPressOffset.dx, size.height), _linePaint);
+    canvas.drawLine(Offset(longPressOffset.dx, 0),
+        Offset(longPressOffset.dx, size.height), _linePaint);
     // draw horizontal line
-    canvas.drawLine(Offset(0, longPressOffset.dy), Offset(size.width, longPressOffset.dy), _linePaint);
+    canvas.drawLine(Offset(0, longPressOffset.dy),
+        Offset(size.width, longPressOffset.dy), _linePaint);
   }
 
   @override
   bool shouldRepaint(covariant KLineLongPressPainter oldDelegate) {
-    return longPressOffset.dx.ceil() != oldDelegate.longPressOffset.dx.ceil() || longPressOffset.dy != oldDelegate.longPressOffset.dy;
+    return longPressOffset.dx.ceil() != oldDelegate.longPressOffset.dx.ceil() ||
+        longPressOffset.dy != oldDelegate.longPressOffset.dy;
   }
 }
