@@ -370,6 +370,7 @@ class KLinePainter extends CustomPainter {
           highest,
           lowest,
           top: KLineController.shared.klineMargin.top,
+          showInfo: false,
           debugData: klineData);
     }
 
@@ -387,7 +388,8 @@ class KLinePainter extends CustomPainter {
           slideOffset,
           highest,
           lowest,
-          top: KLineController.shared.klineMargin.top);
+          top: KLineController.shared.klineMargin.top,
+          showInfo: false);
     }
 
     // draw sub indicator
@@ -414,7 +416,7 @@ class KLinePainter extends CustomPainter {
 
       if (type == IndicatorType.vol) {
         VolPainter(klineData, beginIdx)
-            .paint(canvas, size, maxVolume, slideOffset);
+            .paint(canvas, size, maxVolume, slideOffset, showInfo: false);
       } else if (type == IndicatorType.macd) {
         MACDPainter(subIndicatorData[type] ?? []).paint(
             canvas,
@@ -425,7 +427,8 @@ class KLinePainter extends CustomPainter {
             subHighest[type] ?? 0.0,
             subLowest[type] ?? 0.0,
             top: subTop,
-            lineColors: KLineController.shared.indicatorColors);
+            lineColors: KLineController.shared.indicatorColors,
+            showInfo: false);
       }
 
       if (type.isLine) {
@@ -441,7 +444,8 @@ class KLinePainter extends CustomPainter {
             subHighest[type] ?? 0.0,
             subLowest[type] ?? 0.0,
             top: subTop,
-            lineColors: KLineController.shared.indicatorColors);
+            lineColors: KLineController.shared.indicatorColors,
+            showInfo: false);
       }
     }
 
@@ -576,6 +580,26 @@ class KLinePainter extends CustomPainter {
           Offset(startX + dashWidth, offset.dy), _currentPricePaint);
       startX += 5.0;
     }
+  }
+
+  static int? selectedVisibleIndexForLongPress({
+    required Offset longPressOffset,
+    required double beginIdx,
+    required double itemWidth,
+    required double spacing,
+    required int dataLength,
+  }) {
+    if (longPressOffset == Offset.zero || dataLength <= 0) return null;
+
+    final dataIndex = KLineController.dataIndexForLocalX(
+      localX: longPressOffset.dx,
+      beginIndex: beginIdx,
+      itemWidth: itemWidth,
+      spacing: spacing,
+      dataLength: dataLength,
+    );
+    final visibleStart = beginIdx.ceil().clamp(0, dataLength).toInt();
+    return dataIndex - visibleStart;
   }
 
   @override

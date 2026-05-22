@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import './kline_controller.dart';
+import 'indicators/indicator_info_painter.dart';
 import './kline_info_widget.dart';
 import './kline_long_press_widget.dart';
 import './kline_painter.dart';
@@ -202,6 +203,15 @@ class _KLineViewState extends State<KLineView> {
                         height: containerH,
                       ),
                     )),
+                    Positioned.fill(
+                      child: IgnorePointer(
+                          child: RepaintBoundary(
+                        child: CustomPaint(
+                          painter: KLineIndicatorInfoPainter(
+                              KLineController.shared.data, _beginIdx),
+                        ),
+                      )),
+                    ),
                     Align(
                       alignment: Alignment.topLeft,
                       child: RepaintBoundary(

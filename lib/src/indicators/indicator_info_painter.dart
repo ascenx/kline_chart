@@ -1,0 +1,284 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+
+import 'indicator_data_handler.dart';
+import 'indicator_line_painter.dart';
+import 'indicator_result.dart';
+import 'macd_painter.dart';
+import '../kline_controller.dart';
+import '../kline_data.dart';
+import '../kline_painter.dart';
+
+class KLineIndicatorInfoPainter extends CustomPainter {
+  final List<KLineData> klineData;
+  final double beginIdx;
+  final _IndicatorInfoConfig _config;
+  final Map<IndicatorType, IndicatorResult> _resultCache = {};
+
+  KLineIndicatorInfoPainter(this.klineData, this.beginIdx)
+      : _config = _IndicatorInfoConfig.fromController(KLineController.shared),
+        super(repaint: KLineController.shared.longPressOffset);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (klineData.isEmpty) return;
+
+    final controller = KLineController.shared;
+    final spacing = _config.spacing;
+    final itemW = size.width / _config.itemCount - spacing;
+    final selectedIndex = KLinePainter.selectedVisibleIndexForLongPress(
+      longPressOffset: controller.longPressOffset.value,
+      beginIdx: beginIdx,
+      itemWidth: itemW,
+      spacing: spacing,
+      dataLength: klineData.length,
+    );
+
+    _paintMainIndicatorInfo(canvas, size, selectedIndex);
+    _paintSubIndicatorInfo(canvas, size, selectedIndex);
+  }
+
+  void _paintMainIndicatorInfo(Canvas canvas, Size size, int? selectedIndex) {
+    final showMainIndicators = _config.showMainIndicators;
+    if (showMainIndicators.isEmpty) return;
+
+    final isShowMA = showMainIndicators.contains(IndicatorType.ma);
+    final isShowEMA = showMainIndicators.contains(IndicatorType.ema);
+    if (isShowMA || isShowEMA) {
+      final periods = isShowMA ? [7, 30] : [7, 25];
+      final result =
+          _indicatorResult(isShowMA ? IndicatorType.ma : IndicatorType.ema);
+      IndicatorLinePainter.paintInfo(
+        canvas,
+        size,
+        showMainIndicators.first,
+        result.data,
+        periods,
+        _config.klineTop,
+        selectedIndex: selectedIndex,
+      );
+    }
+
+    final isShowBOLL = showMainIndicators.contains(IndicatorType.boll);
+    if (isShowBOLL) {
+      final period = _config.bollPeriod;
+      final result = _indicatorResult(IndicatorType.boll);
+      IndicatorLinePainter.paintInfo(
+        canvas,
+        size,
+        showMainIndicators.first,
+        result.data,
+        [period, period, period],
+        _config.klineTop,
+        selectedIndex: selectedIndex,
+      );
+    }
+  }
+
+  void _paintSubIndicatorInfo(Canvas canvas, Size size, int? selectedIndex) {
+    final showSubIndicators = _config.showSubIndicators;
+    final subIndicatorCount = showSubIndicators.length;
+    final indicatorH = _config.subIndicatorHeight;
+    final indicatorSpacing = _config.indicatorSpacing;
+
+    for (var idx = subIndicatorCount - 1; idx >= 0; --idx) {
+      final type = showSubIndicators[idx];
+      final orderIdx = subIndicatorCount - idx;
+      final subTop = size.height -
+          orderIdx * (indicatorH + indicatorSpacing) +
+          indicatorSpacing;
+
+      if (type == IndicatorType.vol) {
+        final periods = _config.volMaPeriods;
+        final result = _indicatorResult(IndicatorType.maVol);
+        IndicatorLinePainter.paintInfo(
+          canvas,
+          size,
+          IndicatorType.maVol,
+          result.data,
+          periods,
+          subTop,
+          selectedIndex: selectedIndex,
+        );
+      } else if (type == IndicatorType.macd) {
+        final result = _indicatorResult(IndicatorType.macd);
+        MACDPainter(result.data).paintInfo(
+          canvas,
+          size,
+          _config.currentPeriods(type),
+          subTop,
+          lineColors: _config.indicatorColors,
+          selectedIndex: selectedIndex,
+        );
+      } else if (type.isLine) {
+        final result = _indicatorResult(type).data;
+        IndicatorLinePainter.paintInfo(
+          canvas,
+          size,
+          type,
+          result,
+          _config.currentPeriods(type),
+          subTop,
+          lineColors: _config.indicatorColors,
+          selectedIndex: selectedIndex,
+        );
+      }
+    }
+  }
+
+  IndicatorResult _indicatorResult(IndicatorType type) {
+    final cached = _resultCache[type];
+    if (cached != null) return cached;
+
+    final result = _calculateIndicatorResult(type);
+    _resultCache[type] = result;
+    return result;
+  }
+
+  IndicatorResult _calculateIndicatorResult(IndicatorType type) {
+    if (type == IndicatorType.ma) {
+      return IndicatorDataHandler.ma(klineData, [7, 30], beginIdx);
+    } else if (type == IndicatorType.ema) {
+      return IndicatorDataHandler.ema(klineData, [7, 25], beginIdx);
+    } else if (type == IndicatorType.boll) {
+      return IndicatorDataHandler.boll(
+          klineData, _config.bollPeriod, _config.bollBandwidth, beginIdx);
+    } else if (type == IndicatorType.maVol) {
+      return IndicatorDataHandler.ma(klineData, _config.volMaPeriods, beginIdx,
+          isVol: true);
+    } else if (type == IndicatorType.macd) {
+      return IndicatorDataHandler.macd(
+          klineData, _config.macdPeriods, beginIdx);
+    }
+    if (type == IndicatorType.kdj) {
+      return IndicatorDataHandler.kdj(klineData, _config.kdjPeriods, beginIdx);
+    } else if (type == IndicatorType.rsi) {
+      return IndicatorDataHandler.rsi(klineData, _config.rsiPeriods, beginIdx);
+    } else if (type == IndicatorType.wr) {
+      return IndicatorDataHandler.wr(klineData, _config.wrPeriods, beginIdx);
+    } else if (type == IndicatorType.obv) {
+      return IndicatorDataHandler.obv(klineData, beginIdx);
+    }
+    return IndicatorResult.empty;
+  }
+
+  @override
+  bool shouldRepaint(covariant KLineIndicatorInfoPainter oldDelegate) {
+    return oldDelegate.klineData != klineData ||
+        oldDelegate.beginIdx != beginIdx ||
+        oldDelegate._config != _config;
+  }
+}
+
+class _IndicatorInfoConfig {
+  final List<IndicatorType> showMainIndicators;
+  final List<IndicatorType> showSubIndicators;
+  final List<int> volMaPeriods;
+  final List<int> macdPeriods;
+  final List<int> kdjPeriods;
+  final List<int> rsiPeriods;
+  final List<int> wrPeriods;
+  final List<Color> indicatorColors;
+  final int bollPeriod;
+  final int bollBandwidth;
+  final double subIndicatorHeight;
+  final double indicatorSpacing;
+  final double klineTop;
+  final double itemCount;
+  final double spacing;
+
+  _IndicatorInfoConfig({
+    required this.showMainIndicators,
+    required this.showSubIndicators,
+    required this.volMaPeriods,
+    required this.macdPeriods,
+    required this.kdjPeriods,
+    required this.rsiPeriods,
+    required this.wrPeriods,
+    required this.indicatorColors,
+    required this.bollPeriod,
+    required this.bollBandwidth,
+    required this.subIndicatorHeight,
+    required this.indicatorSpacing,
+    required this.klineTop,
+    required this.itemCount,
+    required this.spacing,
+  });
+
+  factory _IndicatorInfoConfig.fromController(KLineController controller) {
+    return _IndicatorInfoConfig(
+      showMainIndicators: List<IndicatorType>.of(controller.showMainIndicators),
+      showSubIndicators: List<IndicatorType>.of(controller.showSubIndicators),
+      volMaPeriods: List<int>.of(controller.volMaPeriods),
+      macdPeriods: List<int>.of(controller.macdPeriods),
+      kdjPeriods: List<int>.of(controller.kdjPeriods),
+      rsiPeriods: List<int>.of(controller.rsiPeriods),
+      wrPeriods: List<int>.of(controller.wrPeriods),
+      indicatorColors: List<Color>.of(controller.indicatorColors),
+      bollPeriod: controller.bollPeriod,
+      bollBandwidth: controller.bollBandwidth,
+      subIndicatorHeight: controller.subIndicatorHeight,
+      indicatorSpacing: controller.indicatorSpacing,
+      klineTop: controller.klineMargin.top,
+      itemCount: controller.itemCount,
+      spacing: controller.spacing,
+    );
+  }
+
+  List<int> currentPeriods(IndicatorType type) {
+    if (type == IndicatorType.kdj) {
+      return kdjPeriods;
+    } else if (type == IndicatorType.macd) {
+      return macdPeriods;
+    } else if (type == IndicatorType.rsi) {
+      return rsiPeriods;
+    } else if (type == IndicatorType.wr) {
+      return wrPeriods;
+    } else if (type == IndicatorType.obv) {
+      return [0];
+    }
+    return const [];
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is _IndicatorInfoConfig &&
+            listEquals(other.showMainIndicators, showMainIndicators) &&
+            listEquals(other.showSubIndicators, showSubIndicators) &&
+            listEquals(other.volMaPeriods, volMaPeriods) &&
+            listEquals(other.macdPeriods, macdPeriods) &&
+            listEquals(other.kdjPeriods, kdjPeriods) &&
+            listEquals(other.rsiPeriods, rsiPeriods) &&
+            listEquals(other.wrPeriods, wrPeriods) &&
+            listEquals(other.indicatorColors, indicatorColors) &&
+            other.bollPeriod == bollPeriod &&
+            other.bollBandwidth == bollBandwidth &&
+            other.subIndicatorHeight == subIndicatorHeight &&
+            other.indicatorSpacing == indicatorSpacing &&
+            other.klineTop == klineTop &&
+            other.itemCount == itemCount &&
+            other.spacing == spacing;
+  }
+
+  @override
+  int get hashCode {
+    return Object.hash(
+      Object.hashAll(showMainIndicators),
+      Object.hashAll(showSubIndicators),
+      Object.hashAll(volMaPeriods),
+      Object.hashAll(macdPeriods),
+      Object.hashAll(kdjPeriods),
+      Object.hashAll(rsiPeriods),
+      Object.hashAll(wrPeriods),
+      Object.hashAll(indicatorColors),
+      bollPeriod,
+      bollBandwidth,
+      subIndicatorHeight,
+      indicatorSpacing,
+      klineTop,
+      itemCount,
+      spacing,
+    );
+  }
+}

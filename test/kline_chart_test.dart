@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kline_chart/kline_chart.dart';
 import 'package:kline_chart/src/indicators/indicator_data_handler.dart';
+import 'package:kline_chart/src/indicators/indicator_line_painter.dart';
 import 'package:kline_chart/src/indicators/macd_painter.dart';
+import 'package:kline_chart/src/indicators/indicator_info_painter.dart';
 import 'package:kline_chart/src/kline_info_widget.dart';
 import 'package:kline_chart/src/kline_long_press_widget.dart';
 import 'package:kline_chart/src/kline_painter.dart';
@@ -127,6 +129,20 @@ void main() {
       final newPainter = KLinePainter(const [], 11);
 
       expect(newPainter.shouldRepaint(oldPainter), isTrue);
+    });
+
+    test('does not repaint the full chart when long press moves', () {
+      final painter = KLinePainter(const [], 10);
+      bool didRepaint = false;
+      void listener() {
+        didRepaint = true;
+      }
+
+      painter.addListener(listener);
+      KLineController.shared.longPressOffset.update(const Offset(12, 24));
+      painter.removeListener(listener);
+
+      expect(didRepaint, isFalse);
     });
 
     testWidgets('renders fractional trailing zoom window without overflow',
@@ -364,6 +380,135 @@ void main() {
       final painter = customPaint.painter as KLineLongPressInfoPainter;
 
       expect(painter.klineData, same(data[13]));
+    });
+
+    test('maps long press x to the selected visible indicator index', () {
+      const itemWidth = 8.0;
+      const spacing = 2.0;
+      final selectedCenterX = KLineController.itemCenterXForDataIndex(
+        dataIndex: 13,
+        beginIndex: 10,
+        itemWidth: itemWidth,
+        spacing: spacing,
+      );
+
+      final selectedIndex = KLinePainter.selectedVisibleIndexForLongPress(
+        longPressOffset: Offset(selectedCenterX, 80),
+        beginIdx: 10,
+        itemWidth: itemWidth,
+        spacing: spacing,
+        dataLength: 20,
+      );
+
+      expect(selectedIndex, 3);
+    });
+
+    test('uses the selected line indicator value while long press is active',
+        () {
+      final valueText = IndicatorLinePainter.infoValueText(
+        IndicatorType.rsi,
+        [10, 20, 30],
+        1,
+      );
+
+      expect(valueText, '20.00');
+    });
+
+    test('uses the touched candle MA value when MA data has a leading point',
+        () {
+      KLineController.shared.itemCount = 5;
+      const beginIdx = 3.0;
+      const itemWidth = 8.0;
+      const spacing = 2.0;
+      final data = _buildKLineDataFromCloses([1, 2, 3, 4, 5, 6, 7, 8]);
+      final result = IndicatorDataHandler.ma(data, [3], beginIdx);
+      final selectedCenterX = KLineController.itemCenterXForDataIndex(
+        dataIndex: 5,
+        beginIndex: beginIdx,
+        itemWidth: itemWidth,
+        spacing: spacing,
+      );
+      final selectedIndex = KLinePainter.selectedVisibleIndexForLongPress(
+        longPressOffset: Offset(selectedCenterX, 80),
+        beginIdx: beginIdx,
+        itemWidth: itemWidth,
+        spacing: spacing,
+        dataLength: data.length,
+      );
+
+      expect(selectedIndex, 2);
+      expect(
+        IndicatorLinePainter.infoValueText(
+          IndicatorType.ma,
+          result.data.single,
+          selectedIndex,
+        ),
+        '5.00',
+      );
+    });
+
+    test('shows NaN when the selected line indicator value is missing', () {
+      expect(
+        IndicatorLinePainter.infoValueText(IndicatorType.rsi, [-1, 20], 0),
+        'NaN',
+      );
+      expect(
+        IndicatorLinePainter.infoValueText(IndicatorType.rsi, [20], 3),
+        'NaN',
+      );
+    });
+
+    test('keeps negative KDJ values displayable', () {
+      final valueText = IndicatorLinePainter.infoValueText(
+        IndicatorType.kdj,
+        [-1.25],
+        0,
+      );
+
+      expect(valueText, '-1.25');
+    });
+
+    test('shows NaN for missing MACD values and keeps real negatives', () {
+      expect(MACDPainter.infoValueText([-1, -0.25], 0), 'NaN');
+      expect(MACDPainter.infoValueText([-1, -0.25], 1), '-0.25');
+      expect(MACDPainter.infoValueText([-1, -0.25], 4), 'NaN');
+    });
+
+    test('repaints the indicator info overlay when long press moves', () {
+      final painter = KLineIndicatorInfoPainter(_buildKLineData(20), 10);
+      bool didRepaint = false;
+      void listener() {
+        didRepaint = true;
+      }
+
+      painter.addListener(listener);
+      KLineController.shared.longPressOffset.update(const Offset(34, 80));
+      painter.removeListener(listener);
+
+      expect(didRepaint, isTrue);
+    });
+
+    test('repaints the indicator info overlay when indicators change', () {
+      final data = _buildKLineData(20);
+      KLineController.shared.showSubIndicators = [IndicatorType.vol];
+      final oldPainter = KLineIndicatorInfoPainter(data, 10);
+
+      KLineController.shared.showSubIndicators = [IndicatorType.macd];
+      final newPainter = KLineIndicatorInfoPainter(data, 10);
+
+      expect(newPainter.shouldRepaint(oldPainter), isTrue);
+    });
+
+    test('repaints the indicator info overlay when periods change', () {
+      final data = _buildKLineData(20);
+      KLineController.shared.showSubIndicators = [IndicatorType.rsi];
+      KLineController.shared.rsiPeriods = [6, 12, 24];
+      final oldPainter = KLineIndicatorInfoPainter(data, 10);
+
+      KLineController.shared.rsiPeriods = [14, 28];
+      final newPainter = KLineIndicatorInfoPainter(data, 10);
+
+      expect(newPainter.shouldRepaint(oldPainter), isTrue);
     });
   });
 }

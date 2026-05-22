@@ -44,6 +44,8 @@ class MACDPainter {
     double minValue, {
     double top = 0.0,
     List<Color> lineColors = const [],
+    int? selectedIndex,
+    bool showInfo = true,
   }) {
     if (dataList.length < 3 || periods.length != 3) return;
     if (dataList[0].isEmpty || dataList[1].isEmpty || dataList[2].isEmpty) {
@@ -75,7 +77,10 @@ class MACDPainter {
         slideOffset, valueOffset, maxValue, minValue, dataList[0], macdColor);
     _drawLine(canvas, drawAreaHeight, contentTop, itemW, itemExtent,
         slideOffset, valueOffset, maxValue, minValue, dataList[1], signalColor);
-    _drawInfo(canvas, size, periods, top, macdColor, signalColor);
+    if (showInfo) {
+      paintInfo(canvas, size, periods, top,
+          lineColors: lineColors, selectedIndex: selectedIndex);
+    }
   }
 
   void _drawHistogram(
@@ -182,25 +187,34 @@ class MACDPainter {
     return height * (1 - (value - minValue) / valueOffset) + top;
   }
 
-  void _drawInfo(
+  void paintInfo(
     Canvas canvas,
     Size size,
     List<int> periods,
-    double top,
-    Color macdColor,
-    Color signalColor,
-  ) {
+    double top, {
+    List<Color> lineColors = const [],
+    int? selectedIndex,
+  }) {
+    if (dataList.length < 3 || periods.length != 3) return;
+    if (lineColors.isEmpty) lineColors = KLineController.shared.indicatorColors;
+    Color macdColor = _lineColor(lineColors, 0, Colors.orange);
+    Color signalColor = _lineColor(lineColors, 1, Colors.purple);
+    double? histogramValue = infoValue(dataList[2], selectedIndex);
     List<String> infoList = [
       'MACD(${periods[0]},${periods[1]},${periods[2]})',
-      'DIF: ${dataList[0].last.toStringAsFixed(2)}',
-      'DEA: ${dataList[1].last.toStringAsFixed(2)}',
-      'MACD: ${dataList[2].last.toStringAsFixed(2)}',
+      'DIF: ${infoValueText(dataList[0], selectedIndex)}',
+      'DEA: ${infoValueText(dataList[1], selectedIndex)}',
+      'MACD: ${infoValueText(dataList[2], selectedIndex)}',
     ];
     List<Color> colors = [
       const Color(0xff666666),
       macdColor,
       signalColor,
-      dataList[2].last >= 0 ? Colors.green : Colors.red,
+      histogramValue == null
+          ? const Color(0xff666666)
+          : histogramValue >= 0
+              ? Colors.green
+              : Colors.red,
     ];
 
     final painter = TextPainter(textDirection: TextDirection.ltr);
@@ -239,6 +253,29 @@ class MACDPainter {
   }
 
   bool _isInvalidValue(double value) => value == -1.0;
+
+  static String infoValueText(List<double> values, int? selectedIndex) {
+    double? value = infoValue(values, selectedIndex);
+    return value == null ? 'NaN' : value.toStringAsFixed(2);
+  }
+
+  static double? infoValue(List<double> values, int? selectedIndex) {
+    if (values.isEmpty) return null;
+
+    if (selectedIndex != null) {
+      if (selectedIndex < 0 || selectedIndex >= values.length) return null;
+      double value = values[selectedIndex];
+      return _isInvalidInfoValue(value) ? null : value;
+    }
+
+    for (int i = values.length - 1; i >= 0; --i) {
+      double value = values[i];
+      if (!_isInvalidInfoValue(value)) return value;
+    }
+    return null;
+  }
+
+  static bool _isInvalidInfoValue(double value) => value == -1.0;
 
   static bool isSolidHistogramBar(double value, double previousValue) {
     if (value >= 0) return value >= previousValue;

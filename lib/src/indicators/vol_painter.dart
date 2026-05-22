@@ -21,7 +21,8 @@ class VolPainter {
     ..color = Colors.red
     ..isAntiAlias = true;
 
-  void paint(Canvas canvas, Size size, double max, double slideOffset) {
+  void paint(Canvas canvas, Size size, double max, double slideOffset,
+      {int? selectedIndex, bool showInfo = true}) {
     if (klineData.isEmpty) return;
 
     double height = KLineController.shared.subIndicatorHeight;
@@ -99,7 +100,9 @@ class VolPainter {
         max,
         min,
         top: originBtm - height,
-        infoTopOffset: 0.0);
+        infoTopOffset: 0.0,
+        selectedIndex: selectedIndex,
+        showInfo: showInfo);
   }
 
   void drawMa(Canvas canvas, Size size) {}

@@ -17,7 +17,9 @@ class IndicatorLinePainter {
       {double top = 0.0,
       List<Color> lineColors = const [],
       double infoTopOffset = 0.0,
-      List<KLineData> debugData = const []}) {
+      List<KLineData> debugData = const [],
+      int? selectedIndex,
+      bool showInfo = true}) {
     if (periods.isEmpty) return;
     if (lineColors.isEmpty) lineColors = KLineController.shared.indicatorColors;
 
@@ -30,12 +32,8 @@ class IndicatorLinePainter {
     double valueOffset = maxValue - minValue;
     double indicatorX = -(spacing + itemW * 0.5);
 
-    List<String> maInfoList = [];
     for (int idx = 0; idx < periods.length; ++idx) {
-      if (dataList.isEmpty) return;
-      if (dataList.length == idx) {
-        continue;
-      }
+      List<double> values = idx < dataList.length ? dataList[idx] : [];
       int period = periods[idx];
 
       Color color =
@@ -50,67 +48,44 @@ class IndicatorLinePainter {
 
       double lastY = 0.0;
       double lastX = 0.0;
-      double lastValue = 0.0;
-
-      for (var i = beginIdx - 1; i < beginIdx + itemCount + 1; ++i) {
-        if (dataList[idx].isEmpty) {
-          return;
-        }
-
-        if ((i - beginIdx).ceil() >= dataList[idx].length) {
-          break;
-        }
-        if (i.ceil() < period) continue;
-        if (type != IndicatorType.obv) {
-          if (type == IndicatorType.kdj) {
-            int firstPeriod = periods.first;
-            if (i.ceil() < firstPeriod - 1) continue;
-          } else {
-            if (i.ceil() < period - 1) continue;
+      if (values.isNotEmpty) {
+        for (var i = beginIdx - 1; i < beginIdx + itemCount + 1; ++i) {
+          if ((i - beginIdx).ceil() >= values.length) {
+            break;
           }
-        }
-        int index = (i - beginIdx).ceil();
-        index = index < 0 ? 0 : index;
-        double value = dataList[idx][index];
-        if (_isInvalidLineValue(type, value)) continue;
-        lastValue = value;
-        double indicatorY = valueOffset == 0.0
-            ? drawAreaHeight * 0.5 + top
-            : drawAreaHeight * (1 - (value - minValue) / valueOffset) + top;
-        if (type.isMain) {
-          indicatorY += KLineController.shared.mainIndicatorInfoMargin;
-        }
-        indicatorY += KLineController.shared.indicatorInfoHeight;
+          if (i.ceil() < period) continue;
+          if (type != IndicatorType.obv) {
+            if (type == IndicatorType.kdj) {
+              int firstPeriod = periods.first;
+              if (i.ceil() < firstPeriod - 1) continue;
+            } else {
+              if (i.ceil() < period - 1) continue;
+            }
+          }
+          int index = (i - beginIdx).ceil();
+          index = index < 0 ? 0 : index;
+          double value = values[index];
+          if (_isInvalidLineValue(type, value)) continue;
+          double indicatorY = valueOffset == 0.0
+              ? drawAreaHeight * 0.5 + top
+              : drawAreaHeight * (1 - (value - minValue) / valueOffset) + top;
+          if (type.isMain) {
+            indicatorY += KLineController.shared.mainIndicatorInfoMargin;
+          }
+          indicatorY += KLineController.shared.indicatorInfoHeight;
 
-        indicatorX =
-            index * (itemW + spacing) - itemW * 0.5 - spacing + slideOffset;
+          indicatorX =
+              index * (itemW + spacing) - itemW * 0.5 - spacing + slideOffset;
 
-        if (lastX == 0.0 && lastY == 0.0) {
-          lastX = indicatorX;
+          if (lastX == 0.0 && lastY == 0.0) {
+            lastX = indicatorX;
+            lastY = indicatorY;
+          }
+
+          canvas.drawLine(
+              Offset(lastX, lastY), Offset(indicatorX, indicatorY), linePaint);
           lastY = indicatorY;
-        }
-
-        canvas.drawLine(
-            Offset(lastX, lastY), Offset(indicatorX, indicatorY), linePaint);
-        lastY = indicatorY;
-        lastX = indicatorX;
-      }
-
-      if (type == IndicatorType.kdj) {
-        if (idx == 0) {
-          maInfoList.add("${type.name}($period, ${periods[1]}, ${periods[2]})");
-          maInfoList.add("K ${lastValue.toStringAsFixed(2)}");
-        } else if (idx == 1) {
-          maInfoList.add("D ${lastValue.toStringAsFixed(2)}");
-        } else if (idx == 2) {
-          maInfoList.add("J ${lastValue.toStringAsFixed(2)}");
-        }
-      } else {
-        if (type == IndicatorType.obv) {
-          maInfoList.add("${type.name}: ${lastValue.toStringAsFixed(2)}");
-        } else {
-          maInfoList
-              .add("${type.name}($period): ${lastValue.toStringAsFixed(2)}");
+          lastX = indicatorX;
         }
       }
     }
@@ -126,13 +101,96 @@ class IndicatorLinePainter {
           .drawDebugRect(canvas, rect, Colors.green.withAlpha(50));
     }
 
-    showIndicatorInfo(canvas, size, type, maInfoList, top,
-        lineColors: lineColors, topOffset: infoTopOffset);
+    if (showInfo) {
+      paintInfo(canvas, size, type, dataList, periods, top,
+          lineColors: lineColors,
+          topOffset: infoTopOffset,
+          selectedIndex: selectedIndex);
+    }
   }
 
   static bool _isInvalidLineValue(IndicatorType type, double value) {
     if (type == IndicatorType.obv || type == IndicatorType.kdj) return false;
     return value < 0;
+  }
+
+  static String infoValueText(
+      IndicatorType type, List<double> values, int? selectedIndex) {
+    double? value = infoValue(type, values, selectedIndex);
+    return value == null ? 'NaN' : value.toStringAsFixed(2);
+  }
+
+  static double? infoValue(
+      IndicatorType type, List<double> values, int? selectedIndex) {
+    if (values.isEmpty) return null;
+
+    if (selectedIndex != null) {
+      int valueIndex = selectedIndex;
+      if (type == IndicatorType.ma || type == IndicatorType.maVol) {
+        valueIndex += 1;
+      }
+      if (valueIndex < 0 || valueIndex >= values.length) return null;
+      double value = values[valueIndex];
+      return _isInvalidInfoValue(type, value) ? null : value;
+    }
+
+    for (int i = values.length - 1; i >= 0; --i) {
+      double value = values[i];
+      if (!_isInvalidInfoValue(type, value)) return value;
+    }
+    return null;
+  }
+
+  static bool _isInvalidInfoValue(IndicatorType type, double value) {
+    if (type == IndicatorType.obv || type == IndicatorType.kdj) return false;
+    return value < 0;
+  }
+
+  static List<String> indicatorInfoList(IndicatorType type,
+      List<List<double>> dataList, List<int> periods, int? selectedIndex) {
+    List<String> infoList = [];
+    for (int idx = 0; idx < periods.length; ++idx) {
+      List<double> values = idx < dataList.length ? dataList[idx] : [];
+      int period = periods[idx];
+      String valueText = infoValueText(type, values, selectedIndex);
+
+      if (type == IndicatorType.kdj) {
+        if (periods.length < 3) break;
+        if (idx == 0) {
+          infoList.add("${type.name}($period, ${periods[1]}, ${periods[2]})");
+          infoList.add("K $valueText");
+        } else if (idx == 1) {
+          infoList.add("D $valueText");
+        } else if (idx == 2) {
+          infoList.add("J $valueText");
+        }
+      } else {
+        if (type == IndicatorType.obv) {
+          infoList.add("${type.name}: $valueText");
+        } else {
+          infoList.add("${type.name}($period): $valueText");
+        }
+      }
+    }
+    return infoList;
+  }
+
+  static void paintInfo(Canvas canvas, Size size, IndicatorType type,
+      List<List<double>> dataList, List<int> periods, double top,
+      {List<Color> lineColors = const [],
+      double topOffset = 0.0,
+      int? selectedIndex}) {
+    if (periods.isEmpty) return;
+    if (lineColors.isEmpty) lineColors = KLineController.shared.indicatorColors;
+    showIndicatorInfo(
+      canvas,
+      size,
+      type,
+      indicatorInfoList(type, dataList, periods, selectedIndex),
+      top,
+      lineColors: lineColors,
+      topOffset: topOffset,
+    );
   }
 
   static void showIndicatorInfo(Canvas canvas, Size size, IndicatorType type,

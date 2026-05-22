@@ -6,7 +6,13 @@ class KLineData {
   double volume = 0.0;
   int time = 0;
 
-  KLineData({this.open = 0.0, this.high = 0.0, this.low = 0.0, this.close = 0.0, this.volume = 0.0, this.time = 0});
+  KLineData(
+      {this.open = 0.0,
+      this.high = 0.0,
+      this.low = 0.0,
+      this.close = 0.0,
+      this.volume = 0.0,
+      this.time = 0});
 
   KLineData.fromJson(dynamic json) {
     open = json['open'] ?? 0.0;
