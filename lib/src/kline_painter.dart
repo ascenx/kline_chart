@@ -5,6 +5,7 @@ import './indicators/indicator_data_handler.dart';
 import './indicators/indicator_result.dart';
 import './kline_controller.dart';
 import './indicators/indicator_line_painter.dart';
+import './indicators/macd_painter.dart';
 import './indicators/vol_painter.dart';
 import './kline_data.dart';
 
@@ -210,9 +211,17 @@ class KLinePainter extends CustomPainter {
         lowest,
         size);
 
-    // KDJ, WR
+    // KDJ, RSI, WR, MACD, OBV
     Map<IndicatorType, dynamic> subIndicatorData = {};
     Map<IndicatorType, double> subHighest = {}, subLowest = {};
+    IndicatorType macdType = IndicatorType.macd;
+    if (showSubIndicators.contains(macdType)) {
+      var res = IndicatorDataHandler.macd(
+          klineData, KLineController.shared.macdPeriods, beginIdx);
+      subIndicatorData[macdType] = res.data;
+      subHighest[macdType] = res.maxValue;
+      subLowest[macdType] = res.minValue;
+    }
     IndicatorType kdjType = IndicatorType.kdj;
     if (showSubIndicators.contains(kdjType)) {
       var res = IndicatorDataHandler.kdj(
@@ -406,6 +415,17 @@ class KLinePainter extends CustomPainter {
       if (type == IndicatorType.vol) {
         VolPainter(klineData, beginIdx)
             .paint(canvas, size, maxVolume, slideOffset);
+      } else if (type == IndicatorType.macd) {
+        MACDPainter(subIndicatorData[type] ?? []).paint(
+            canvas,
+            size,
+            indicatorH - KLineController.shared.indicatorInfoHeight,
+            KLineController.shared.currentPeriods(type),
+            slideOffset,
+            subHighest[type] ?? 0.0,
+            subLowest[type] ?? 0.0,
+            top: subTop,
+            lineColors: KLineController.shared.indicatorColors);
       }
 
       if (type.isLine) {

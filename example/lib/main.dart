@@ -78,7 +78,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future<List<KLineData>> _loadJson() async {
-    final jsonStr = await rootBundle.loadString('lib/kline.json');
+    final jsonStr = await rootBundle.loadString('lib/binance_btc_month.json');
     List jsonList = json.decode(jsonStr);
     List<KLineData> dataList = [];
     for (var data in jsonList) {

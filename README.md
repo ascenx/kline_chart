@@ -38,7 +38,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future<List<KLineData>> _loadJson() async {
-    final jsonStr = await rootBundle.loadString('lib/kline.json');
+    final jsonStr = await rootBundle.loadString('lib/binance_btc_month.json');
     List jsonList = json.decode(jsonStr);
     List<KLineData> dataList = [];
     for (var data in jsonList) {
@@ -90,8 +90,7 @@ class _MyHomePageState extends State<MyHomePage> {
 - ~~Time Chart~~
 - ~~Publish to pub.dev~~
 - ~~Improve scale gesture~~
-
-- MACD sub indicator
+- ~~MACD sub indicator~~
 - ~~RSI sub indicator~~
 - SAR  indicator
 

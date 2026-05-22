@@ -163,55 +163,92 @@ class IndicatorDataHandler {
   }
 
   static IndicatorResult macd(
-      List<KLineData> klineData, List periods, double beginIdx) {
-    return IndicatorResult.empty;
+      List<KLineData> klineData, List<int> periods, double beginIdx) {
+    if (klineData.isEmpty ||
+        periods.length != 3 ||
+        periods.any((period) => period <= 0)) {
+      return IndicatorResult.empty;
+    }
+
+    int fastPeriod = periods[0];
+    int slowPeriod = periods[1];
+    int signalPeriod = periods[2];
+    double fastAlpha = 2.0 / (fastPeriod + 1);
+    double slowAlpha = 2.0 / (slowPeriod + 1);
+    double signalAlpha = 2.0 / (signalPeriod + 1);
+
+    List<double> macdLine = [];
+    List<double> signalLine = [];
+    List<double> histogram = [];
+
+    double? fastEma;
+    double? slowEma;
+    double? signalEma;
+
+    for (int i = 0; i < klineData.length; ++i) {
+      double close = klineData[i].close;
+      if (i < fastPeriod - 1) {
+        fastEma = null;
+      } else if (i == fastPeriod - 1) {
+        fastEma = _closeAverage(klineData, i - fastPeriod + 1, i + 1);
+      } else {
+        fastEma = close * fastAlpha + fastEma! * (1 - fastAlpha);
+      }
+
+      if (i < slowPeriod - 1) {
+        macdLine.add(-1);
+        signalLine.add(-1);
+        histogram.add(-1);
+        continue;
+      } else if (i == slowPeriod - 1) {
+        slowEma = _closeAverage(klineData, i - slowPeriod + 1, i + 1);
+      } else {
+        slowEma = close * slowAlpha + slowEma! * (1 - slowAlpha);
+      }
+
+      double macd = fastEma! - slowEma;
+      signalEma = signalEma == null
+          ? macd
+          : macd * signalAlpha + signalEma * (1 - signalAlpha);
+      double hist = macd - signalEma;
+
+      macdLine.add(macd);
+      signalLine.add(signalEma);
+      histogram.add(hist);
+    }
+
+    int start = _visibleStart(beginIdx);
+    int end = _visibleEnd(klineData, beginIdx);
+    List<double> visibleMacd = start < end ? macdLine.sublist(start, end) : [];
+    List<double> visibleSignal =
+        start < end ? signalLine.sublist(start, end) : [];
+    List<double> visibleHistogram =
+        start < end ? histogram.sublist(start, end) : [];
+
+    double maxValue = 0.0;
+    double minValue = 0.0;
+    for (List<double> values in [
+      visibleMacd,
+      visibleSignal,
+      visibleHistogram
+    ]) {
+      for (double value in values) {
+        if (value < 0 && value == -1) continue;
+        if (value > maxValue) maxValue = value;
+        if (value < minValue) minValue = value;
+      }
+    }
+
+    return IndicatorResult(
+        [visibleMacd, visibleSignal, visibleHistogram], maxValue, minValue);
   }
 
-  static double _emaCalculate(List<double> values, int period) {
-    if (values.length < period) {
-      return 0.0;
+  static double _closeAverage(List<KLineData> klineData, int start, int end) {
+    double sum = 0.0;
+    for (int i = start; i < end; ++i) {
+      sum += klineData[i].close;
     }
-
-    double sum = 0;
-    for (int i = values.length - period; i < values.length; i++) {
-      sum += values[i];
-    }
-
-    return sum / period;
-  }
-
-  static void calculateMACD(
-      List<double> values, int shortPeriod, int longPeriod, int signalPeriod) {
-    List<double> shortEMA = [];
-    for (int i = longPeriod - shortPeriod; i < values.length; i++) {
-      List<double> subset = values.sublist(i - shortPeriod + 1, i + 1);
-      double ema = _emaCalculate(subset, shortPeriod);
-      shortEMA.add(ema);
-    }
-
-    List<double> longEMA = [];
-    for (int i = longPeriod - 1; i < values.length; i++) {
-      List<double> subset = values.sublist(i - longPeriod + 1, i + 1);
-      double ema = _emaCalculate(subset, longPeriod);
-      longEMA.add(ema);
-    }
-
-    List<double> dif = [];
-    for (int i = 0; i < longEMA.length; i++) {
-      dif.add(shortEMA[i] - longEMA[i]);
-    }
-
-    List<double> dea = [];
-    for (int i = signalPeriod - 1; i < dif.length; i++) {
-      List<double> subset = dif.sublist(i - signalPeriod + 1, i + 1);
-      double ema = _emaCalculate(subset, signalPeriod);
-      dea.add(ema);
-    }
-
-    List<double> macd = [];
-    for (int i = 0; i < dif.length; i++) {
-      macd.add(2 * (dif[i] - dea[i]));
-    }
+    return sum / (end - start);
   }
 
   static IndicatorResult kdj(

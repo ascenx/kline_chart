@@ -12,7 +12,7 @@ enum IndicatorType {
   // sub
   vol(name: "VOL", isLine: false),
   maVol(name: "MAVOL"), // same as ma, use for volume's ma
-  // macd(name: "MACD", isLine: false),
+  macd(name: "MACD", isLine: false),
   kdj(name: "KDJ"),
   rsi(name: "RSI"),
   wr(name: "WR"),
@@ -111,7 +111,7 @@ class KLineController {
   double indicatorInfoHeight = 15.0;
 
   // Main indicator height = totalHeight - klineMargin.vertical - subIndicatorHeight - indicatorMargin
-  
+
   /// show main indicator
   List<IndicatorType> showMainIndicators = [IndicatorType.ma];
 
@@ -130,6 +130,9 @@ class KLineController {
   /// VOL MA periods
   List<int> volMaPeriods = [7, 14];
 
+  /// MACD periods
+  List<int> macdPeriods = [12, 26, 9];
+
   /// KDJ periods
   List<int> kdjPeriods = [9, 3, 3];
 
@@ -143,6 +146,8 @@ class KLineController {
     KLineController config = KLineController.shared;
     if (type == IndicatorType.kdj) {
       return config.kdjPeriods;
+    } else if (type == IndicatorType.macd) {
+      return config.macdPeriods;
     } else if (type == IndicatorType.rsi) {
       return config.rsiPeriods;
     } else if (type == IndicatorType.wr) {

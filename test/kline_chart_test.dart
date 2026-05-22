@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kline_chart/kline_chart.dart';
 import 'package:kline_chart/src/indicators/indicator_data_handler.dart';
+import 'package:kline_chart/src/indicators/macd_painter.dart';
 import 'package:kline_chart/src/kline_info_widget.dart';
 import 'package:kline_chart/src/kline_long_press_widget.dart';
 import 'package:kline_chart/src/kline_painter.dart';
@@ -257,6 +258,55 @@ void main() {
       expect(result.data.single, [-1, -1, -1]);
       expect(result.maxValue, 100);
       expect(result.minValue, 0);
+    });
+  });
+
+  group('IndicatorDataHandler.macd', () {
+    test('calculates Binance-style MACD values for the visible window', () {
+      KLineController.shared.itemCount = 10;
+      final data =
+          _buildKLineDataFromCloses([10, 12, 11, 14, 13, 15, 16, 14, 17, 18]);
+
+      final result = IndicatorDataHandler.macd(data, [3, 6, 3], 0);
+      final macdLine = result.data[0];
+      final signalLine = result.data[1];
+      final histogram = result.data[2];
+
+      expect(macdLine.sublist(0, 5), [-1, -1, -1, -1, -1]);
+      expect(signalLine.sublist(0, 5), [-1, -1, -1, -1, -1]);
+      expect(histogram.sublist(0, 5), [-1, -1, -1, -1, -1]);
+      expect(macdLine[5], closeTo(1.375, 0.000001));
+      expect(signalLine[5], closeTo(1.375, 0.000001));
+      expect(histogram[5], closeTo(0, 0.000001));
+      expect(macdLine[7], closeTo(0.825893, 0.000001));
+      expect(signalLine[7], closeTo(1.116071, 0.000001));
+      expect(histogram[7], closeTo(-0.290179, 0.000001));
+      expect(macdLine[9], closeTo(1.294301, 0.000001));
+      expect(signalLine[9], closeTo(1.209252, 0.000001));
+      expect(histogram[9], closeTo(0.085049, 0.000001));
+      expect(result.maxValue, closeTo(1.4375, 0.000001));
+      expect(result.minValue, closeTo(-0.290179, 0.000001));
+    });
+
+    test('classifies MACD histogram bars as solid or hollow', () {
+      expect(MACDPainter.isSolidHistogramBar(0.3, 0.2), isTrue);
+      expect(MACDPainter.isSolidHistogramBar(0.2, 0.3), isFalse);
+      expect(MACDPainter.isSolidHistogramBar(-0.3, -0.2), isTrue);
+      expect(MACDPainter.isSolidHistogramBar(-0.2, -0.3), isFalse);
+    });
+  });
+
+  group('MACD sub indicator rendering', () {
+    testWidgets('renders MACD as histogram with signal lines', (tester) async {
+      KLineController.shared.data = _buildKLineData(40);
+      KLineController.shared.showSubIndicators = [IndicatorType.macd];
+
+      await tester.pumpWidget(MaterialApp(
+        home: SizedBox(width: 300, height: 240, child: KLineView()),
+      ));
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
     });
   });
 
