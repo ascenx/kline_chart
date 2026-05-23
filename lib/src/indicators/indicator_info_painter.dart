@@ -189,6 +189,8 @@ class _IndicatorInfoConfig {
   final double klineTop;
   final double itemCount;
   final double spacing;
+  final KLineNumberFormatter? volumeFormatter;
+  final KLineIndicatorFormatter? indicatorFormatter;
 
   _IndicatorInfoConfig({
     required this.showMainIndicators,
@@ -210,6 +212,8 @@ class _IndicatorInfoConfig {
     required this.klineTop,
     required this.itemCount,
     required this.spacing,
+    required this.volumeFormatter,
+    required this.indicatorFormatter,
   });
 
   factory _IndicatorInfoConfig.fromController(KLineController controller) {
@@ -233,6 +237,8 @@ class _IndicatorInfoConfig {
       klineTop: controller.klineMargin.top,
       itemCount: controller.itemCount,
       spacing: controller.spacing,
+      volumeFormatter: controller.volumeFormatter,
+      indicatorFormatter: controller.indicatorFormatter,
     );
   }
 
@@ -258,12 +264,14 @@ class _IndicatorInfoConfig {
             other.indicatorSpacing == indicatorSpacing &&
             other.klineTop == klineTop &&
             other.itemCount == itemCount &&
-            other.spacing == spacing;
+            other.spacing == spacing &&
+            other.volumeFormatter == volumeFormatter &&
+            other.indicatorFormatter == indicatorFormatter;
   }
 
   @override
   int get hashCode {
-    return Object.hash(
+    return Object.hashAll([
       Object.hashAll(showMainIndicators),
       Object.hashAll(showSubIndicators),
       Object.hashAll(volMaPeriods),
@@ -283,6 +291,8 @@ class _IndicatorInfoConfig {
       klineTop,
       itemCount,
       spacing,
-    );
+      volumeFormatter,
+      indicatorFormatter,
+    ]);
   }
 }

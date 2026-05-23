@@ -44,8 +44,55 @@ void main() {
     KLineController.shared.trailingBlankItemCount = 0;
     KLineController.shared.maxTrailingBlankItemCount = 0;
     KLineController.shared.minTrailingVisibleItemCount = 3;
+    KLineController.shared.priceFormatter = null;
+    KLineController.shared.volumeFormatter = null;
+    KLineController.shared.indicatorFormatter = null;
     KLineController.shared.showTimeChart = false;
     KLineController.shared.longPressOffset.update(Offset.zero);
+  });
+
+  group('KLineController number formatters', () {
+    test('keeps default price volume and indicator formatting', () {
+      expect(KLineController.shared.formatPrice(12.345), '12.35');
+      expect(KLineController.shared.formatCurrentPrice(12.345), '12.345');
+      expect(KLineController.shared.formatVolume(123.456), '123.46');
+      expect(KLineController.shared.formatVolume(1234.567), '1.23K');
+      expect(
+        KLineController.shared.formatIndicator(
+          12.345,
+          IndicatorType.rsi,
+          period: 6,
+        ),
+        '12.35',
+      );
+    });
+
+    test('uses K M and B suffixes for default volume formatting', () {
+      expect(KLineController.shared.formatVolume(999.999), '1000.00');
+      expect(KLineController.shared.formatVolume(1000), '1.00K');
+      expect(KLineController.shared.formatVolume(1250000), '1.25M');
+      expect(KLineController.shared.formatVolume(2500000000), '2.50B');
+    });
+
+    test('uses separate custom formatters for price volume and indicators', () {
+      KLineController.shared.priceFormatter = (value) => 'P$value';
+      KLineController.shared.volumeFormatter = (value) => 'V$value';
+      KLineController.shared.indicatorFormatter = (value, type, period) {
+        return '${type.name}:${period ?? 0}:$value';
+      };
+
+      expect(KLineController.shared.formatPrice(12.3), 'P12.3');
+      expect(KLineController.shared.formatCurrentPrice(12.3), 'P12.3');
+      expect(KLineController.shared.formatVolume(45.6), 'V45.6');
+      expect(
+        KLineController.shared.formatIndicator(
+          7.89,
+          IndicatorType.macd,
+          period: 12,
+        ),
+        'MACD:12:7.89',
+      );
+    });
   });
 
   group('KLineController.beginIndexForScrollOffset', () {
@@ -1112,6 +1159,41 @@ void main() {
       );
 
       expect(valueText, '30.00');
+    });
+
+    test('formats line indicator values with the indicator formatter', () {
+      KLineController.shared.indicatorFormatter = (value, type, period) {
+        return '${type.name}:${period ?? 0}:${value.toStringAsFixed(1)}';
+      };
+
+      final valueText = IndicatorLinePainter.infoValueText(
+        IndicatorType.rsi,
+        [10.25, 20.25],
+        1,
+        period: 6,
+      );
+
+      expect(valueText, 'RSI:6:20.3');
+    });
+
+    test('formats volume MA values with the volume formatter', () {
+      KLineController.shared.volumeFormatter = (value) => 'VOL:$value';
+
+      final valueText = IndicatorLinePainter.infoValueText(
+        IndicatorType.maVol,
+        [10, 12.5],
+        0,
+      );
+
+      expect(valueText, 'VOL:12.5');
+    });
+
+    test('formats MACD values with the indicator formatter', () {
+      KLineController.shared.indicatorFormatter = (value, type, period) {
+        return '${type.name}:${period ?? 0}:${value.toStringAsFixed(3)}';
+      };
+
+      expect(MACDPainter.infoValueText([-1, -0.25], 1), 'MACD:0:-0.250');
     });
 
     test('uses the touched candle MA value when MA data has a leading point',

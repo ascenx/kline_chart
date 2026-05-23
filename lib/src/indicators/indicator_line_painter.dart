@@ -132,10 +132,16 @@ class IndicatorLinePainter {
 
   static String infoValueText(
       IndicatorType type, List<double> values, int? selectedIndex,
-      {int? leadingItemCount}) {
+      {int? leadingItemCount, int? period}) {
     double? value = infoValue(type, values, selectedIndex,
         leadingItemCount: leadingItemCount);
-    return value == null ? 'NaN' : value.toStringAsFixed(2);
+    if (value == null) {
+      return 'NaN';
+    }
+    if (type == IndicatorType.maVol) {
+      return KLineController.shared.formatVolume(value);
+    }
+    return KLineController.shared.formatIndicator(value, type, period: period);
   }
 
   static double? infoValue(
@@ -179,7 +185,7 @@ class IndicatorLinePainter {
       List<double> values = idx < dataList.length ? dataList[idx] : [];
       int period = periods[idx];
       String valueText = infoValueText(type, values, selectedIndex,
-          leadingItemCount: leadingItemCount);
+          leadingItemCount: leadingItemCount, period: period);
 
       if (type == IndicatorType.kdj) {
         if (periods.length < 3) {

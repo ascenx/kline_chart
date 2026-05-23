@@ -315,8 +315,8 @@ class MACDPainter {
     double? histogramValue = infoValue(dataList[2], selectedIndex);
     List<String> infoList = [
       'MACD(${periods[0]},${periods[1]},${periods[2]})',
-      'DIF: ${infoValueText(dataList[0], selectedIndex)}',
-      'DEA: ${infoValueText(dataList[1], selectedIndex)}',
+      'DIF: ${infoValueText(dataList[0], selectedIndex, period: periods[0])}',
+      'DEA: ${infoValueText(dataList[1], selectedIndex, period: periods[2])}',
       'MACD: ${infoValueText(dataList[2], selectedIndex)}',
     ];
     List<Color> colors = [
@@ -357,9 +357,13 @@ class MACDPainter {
 
   bool _isInvalidValue(double value) => value == -1.0;
 
-  static String infoValueText(List<double> values, int? selectedIndex) {
+  static String infoValueText(List<double> values, int? selectedIndex,
+      {int? period}) {
     double? value = infoValue(values, selectedIndex);
-    return value == null ? 'NaN' : value.toStringAsFixed(2);
+    return value == null
+        ? 'NaN'
+        : KLineController.shared
+            .formatIndicator(value, IndicatorType.macd, period: period);
   }
 
   static double? infoValue(List<double> values, int? selectedIndex) {

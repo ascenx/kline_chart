@@ -137,6 +137,41 @@ controller.indicatorColors = [
 controller.sarColor = Colors.orange;
 ```
 
+## Number Formatting
+
+Set optional formatter callbacks on `KLineController.shared` to customize
+display text for prices, volume values, and indicator values. When a formatter
+is not set, the chart keeps the built-in numeric formatting. The default volume
+formatter uses `K`, `M`, and `B` suffixes for values of at least 1,000,
+1,000,000, and 1,000,000,000.
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `priceFormatter` | `String Function(double value)?` | Formats price values such as open, high, low, close, price rulers, high/low labels, and the current price marker. |
+| `volumeFormatter` | `String Function(double value)?` | Formats volume values such as candle volume, VOL rulers, and MAVOL values. |
+| `indicatorFormatter` | `String Function(double value, IndicatorType type, int? period)?` | Formats indicator values such as MA, EMA, BOLL, SAR, MACD, KDJ, RSI, WR, and OBV. |
+
+```dart
+controller.priceFormatter = (value) => value.toStringAsFixed(4);
+
+controller.volumeFormatter = (value) {
+  if (value >= 1000000) {
+    return '${(value / 1000000).toStringAsFixed(2)}M';
+  }
+  if (value >= 1000) {
+    return '${(value / 1000).toStringAsFixed(2)}K';
+  }
+  return value.toStringAsFixed(2);
+};
+
+controller.indicatorFormatter = (value, type, period) {
+  if (type == IndicatorType.macd) {
+    return value.toStringAsFixed(6);
+  }
+  return value.toStringAsFixed(2);
+};
+```
+
 ## Partial Updates
 
 Each style class supports `copyWith`.

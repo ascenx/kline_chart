@@ -52,13 +52,17 @@ class KLineLongPressInfoPainter extends CustomPainter {
 
   var longPressOffset = Offset.zero;
   final KLineInfoStyle infoStyle;
+  final KLineNumberFormatter? _priceFormatter;
+  final KLineNumberFormatter? _volumeFormatter;
   final _textPainter = TextPainter(
     textDirection: TextDirection.ltr,
     maxLines: 2,
   );
 
   KLineLongPressInfoPainter(this.klineData, this.beginIdx, this.longPressOffset,
-      [this.infoStyle = const KLineInfoStyle()]);
+      [this.infoStyle = const KLineInfoStyle()])
+      : _priceFormatter = KLineController.shared.priceFormatter,
+        _volumeFormatter = KLineController.shared.volumeFormatter;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -72,15 +76,16 @@ class KLineLongPressInfoPainter extends CustomPainter {
         Offset(leftPadding, topPadding),
         size,
         width: size.width);
-    drawText(canvas, 'high:${klineData.high.toStringAsFixed(2)}',
+    final controller = KLineController.shared;
+    drawText(canvas, 'high:${controller.formatPrice(klineData.high)}',
         Offset(leftPadding, topPadding + fontHeight * 2), size);
-    drawText(canvas, 'open:${klineData.open.toStringAsFixed(2)}',
+    drawText(canvas, 'open:${controller.formatPrice(klineData.open)}',
         Offset(leftPadding, topPadding + fontHeight * 3), size);
-    drawText(canvas, 'low:${klineData.low.toStringAsFixed(2)}',
+    drawText(canvas, 'low:${controller.formatPrice(klineData.low)}',
         Offset(leftPadding, topPadding + fontHeight * 4), size);
-    drawText(canvas, 'close:${klineData.close.toStringAsFixed(2)}',
+    drawText(canvas, 'close:${controller.formatPrice(klineData.close)}',
         Offset(leftPadding, topPadding + fontHeight * 5), size);
-    drawText(canvas, 'volume:${klineData.volume.toStringAsFixed(2)}',
+    drawText(canvas, 'volume:${controller.formatVolume(klineData.volume)}',
         Offset(leftPadding, topPadding + fontHeight * 6), size);
   }
 
@@ -96,6 +101,8 @@ class KLineLongPressInfoPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant KLineLongPressInfoPainter oldDelegate) {
     return klineData != oldDelegate.klineData ||
-        infoStyle != oldDelegate.infoStyle;
+        infoStyle != oldDelegate.infoStyle ||
+        _priceFormatter != oldDelegate._priceFormatter ||
+        _volumeFormatter != oldDelegate._volumeFormatter;
   }
 }

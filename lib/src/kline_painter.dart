@@ -18,6 +18,9 @@ class KLinePainter extends CustomPainter {
   final KLineChartStyle _chartStyle;
   final KLineCandleStyle _candleStyle;
   final KLineVolumeStyle _volumeStyle;
+  final KLineNumberFormatter? _priceFormatter;
+  final KLineNumberFormatter? _volumeFormatter;
+  final KLineIndicatorFormatter? _indicatorFormatter;
   final List<Color> _indicatorColors;
   final Color _sarColor;
   final KLineIndicatorDataCache _indicatorDataCache;
@@ -27,6 +30,9 @@ class KLinePainter extends CustomPainter {
       : _chartStyle = KLineController.shared.chartStyle,
         _candleStyle = KLineController.shared.candleStyle,
         _volumeStyle = KLineController.shared.volumeStyle,
+        _priceFormatter = KLineController.shared.priceFormatter,
+        _volumeFormatter = KLineController.shared.volumeFormatter,
+        _indicatorFormatter = KLineController.shared.indicatorFormatter,
         _indicatorColors =
             List<Color>.of(KLineController.shared.indicatorColors),
         _sarColor = KLineController.shared.sarColor,
@@ -420,10 +426,11 @@ class KLinePainter extends CustomPainter {
       if (hasFallCandle) {
         canvas.drawPath(_fallCandleWickPath, _fallLinePaint);
       }
-      _drawHighestLowestText(
-          canvas, "$mainHighest", Offset(highestX, highestY), size);
-      _drawHighestLowestText(
-          canvas, "$mainLowest", Offset(lowestX, lowestY), size);
+      final controller = KLineController.shared;
+      _drawHighestLowestText(canvas, controller.formatPrice(mainHighest),
+          Offset(highestX, highestY), size);
+      _drawHighestLowestText(canvas, controller.formatPrice(mainLowest),
+          Offset(lowestX, lowestY), size);
     }
 
     if (isShowMA || isShowEMA) {
@@ -501,7 +508,7 @@ class KLinePainter extends CustomPainter {
 
       // draw ruler text
       _drawSubIndicatorRulerText(canvas, indicatorH, size.width, subTop,
-          subHighestValue, subLowestValue, size);
+          subHighestValue, subLowestValue, size, type);
 
       if (type == IndicatorType.vol) {
         VolPainter(klineData, beginIdx, indicatorDataCache: _indicatorDataCache)
@@ -548,7 +555,9 @@ class KLinePainter extends CustomPainter {
         : (1 - (currentPrice - lowest) / (highest - lowest));
     currentPriceRate = currentPriceRate > 1 ? 1 : currentPriceRate;
     currentPriceRate = currentPriceRate < 0 ? 0 : currentPriceRate;
-    _drawCurrentPrice(canvas, currentPrice.toString(),
+    _drawCurrentPrice(
+        canvas,
+        KLineController.shared.formatCurrentPrice(currentPrice),
         Offset(size.width - 56, currentPriceRate * mainHeight + mainTopMargin));
   }
 
@@ -592,16 +601,27 @@ class KLinePainter extends CustomPainter {
       ..strokeWidth = _chartStyle.timeLineWidth;
   }
 
-  void _drawSubIndicatorRulerText(Canvas canvas, double height, double width,
-      double top, double highest, double lowest, Size canvasSize) {
+  void _drawSubIndicatorRulerText(
+      Canvas canvas,
+      double height,
+      double width,
+      double top,
+      double highest,
+      double lowest,
+      Size canvasSize,
+      IndicatorType type) {
+    final controller = KLineController.shared;
+    final formatValue = type == IndicatorType.vol
+        ? controller.formatVolume
+        : (double value) => controller.formatIndicator(value, type);
     // draw highest text
-    _drawText(canvas, highest.toStringAsFixed(2),
+    _drawText(canvas, formatValue(highest),
         Offset(width - 56, top + KLineController.shared.indicatorInfoHeight),
         width: 56);
 
     // draw lowest text
-    _drawText(canvas, lowest.toStringAsFixed(2),
-        Offset(width - 56, top + height - 14.0),
+    _drawText(
+        canvas, formatValue(lowest), Offset(width - 56, top + height - 14.0),
         width: 56);
   }
 
@@ -662,29 +682,40 @@ class KLinePainter extends CustomPainter {
       // draw rule text
       _drawText(
           canvas,
-          '${(highestPrice - priceOffset * i / 4).toStringAsFixed(2)}',
+          KLineController.shared
+              .formatPrice(highestPrice - priceOffset * i / 4),
           Offset(width - 56, scaleHeight * i / 4 + scaleTop - 12),
           width: 56);
     }
   }
 
   void _drawCurrentPrice(Canvas canvas, String currentPrice, Offset offset) {
+    _textPainter.text =
+        TextSpan(text: currentPrice, style: _chartStyle.currentPriceTextStyle);
+    _textPainter.layout();
+    double markerWidth = _textPainter.width + 8;
+    if (markerWidth < 56) {
+      markerWidth = 56;
+    }
+    final markerRight = offset.dx + 56;
+    final markerLeft = markerRight - markerWidth;
+
     canvas.drawRRect(
-        RRect.fromLTRBR(offset.dx - 1, offset.dy - 9, offset.dx + 56,
+        RRect.fromLTRBR(markerLeft - 1, offset.dy - 9, markerRight,
             offset.dy + 9, const Radius.circular(4)),
         _currentPriceBgPaint);
     canvas.drawRRect(
-        RRect.fromLTRBR(offset.dx - 1, offset.dy - 9, offset.dx + 56,
+        RRect.fromLTRBR(markerLeft - 1, offset.dy - 9, markerRight,
             offset.dy + 9, const Radius.circular(4)),
         _currentPricePaint);
-    _drawText(canvas, currentPrice, Offset(offset.dx + 3, offset.dy - 6),
+    _drawText(canvas, currentPrice, Offset(markerLeft + 3, offset.dy - 6),
         style: _chartStyle.currentPriceTextStyle);
 
     // draw dotted line
     double startX = 0.0;
     double dashWidth = 3.0;
     _currentPriceDashPath.reset();
-    while (startX < offset.dx - 2) {
+    while (startX < markerLeft - 2) {
       _currentPriceDashPath
         ..moveTo(startX, offset.dy)
         ..lineTo(startX + dashWidth, offset.dy);
@@ -730,6 +761,9 @@ class KLinePainter extends CustomPainter {
         oldDelegate._chartStyle != _chartStyle ||
         oldDelegate._candleStyle != _candleStyle ||
         oldDelegate._volumeStyle != _volumeStyle ||
+        oldDelegate._priceFormatter != _priceFormatter ||
+        oldDelegate._volumeFormatter != _volumeFormatter ||
+        oldDelegate._indicatorFormatter != _indicatorFormatter ||
         !listEquals(oldDelegate._indicatorColors, _indicatorColors) ||
         oldDelegate._sarColor != _sarColor;
   }

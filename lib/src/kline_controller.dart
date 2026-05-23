@@ -35,6 +35,16 @@ enum IndicatorType {
   }
 }
 
+/// Formats a price or volume value for display.
+typedef KLineNumberFormatter = String Function(double value);
+
+/// Formats an indicator value for display.
+typedef KLineIndicatorFormatter = String Function(
+  double value,
+  IndicatorType type,
+  int? period,
+);
+
 class LongPressOffset extends ValueNotifier<Offset> {
   LongPressOffset(Offset value) : super(value);
 
@@ -61,6 +71,15 @@ class KLineController {
   KLineVolumeStyle volumeStyle = const KLineVolumeStyle();
   KLineCrosshairStyle crosshairStyle = const KLineCrosshairStyle();
   KLineInfoStyle infoStyle = const KLineInfoStyle();
+
+  /// Formats price values such as open, high, low, close, rulers, and markers.
+  KLineNumberFormatter? priceFormatter;
+
+  /// Formats volume values such as candle volume and volume rulers.
+  KLineNumberFormatter? volumeFormatter;
+
+  /// Formats indicator values such as MA, MACD, RSI, KDJ, WR, and OBV.
+  KLineIndicatorFormatter? indicatorFormatter;
 
   bool isDebug = false;
   Color randomColor = Color.fromARGB(
@@ -189,6 +208,37 @@ class KLineController {
   }
 
   List<Color> indicatorColors = [Colors.orange, Colors.purple, Colors.blue];
+
+  String formatPrice(double value) {
+    return priceFormatter?.call(value) ?? value.toStringAsFixed(2);
+  }
+
+  String formatCurrentPrice(double value) {
+    return priceFormatter?.call(value) ?? value.toString();
+  }
+
+  String formatVolume(double value) {
+    return volumeFormatter?.call(value) ?? _formatCompactVolume(value);
+  }
+
+  String formatIndicator(double value, IndicatorType type, {int? period}) {
+    return indicatorFormatter?.call(value, type, period) ??
+        value.toStringAsFixed(2);
+  }
+
+  static String _formatCompactVolume(double value) {
+    final absValue = value.abs();
+    if (absValue >= 1000000000) {
+      return '${(value / 1000000000).toStringAsFixed(2)}B';
+    }
+    if (absValue >= 1000000) {
+      return '${(value / 1000000).toStringAsFixed(2)}M';
+    }
+    if (absValue >= 1000) {
+      return '${(value / 1000).toStringAsFixed(2)}K';
+    }
+    return value.toStringAsFixed(2);
+  }
 
   static double getItemWidth(double totalWidth) {
     double spacing = KLineController.shared.spacing;
