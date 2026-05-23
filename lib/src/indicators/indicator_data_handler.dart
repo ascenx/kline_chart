@@ -7,6 +7,10 @@ import '../kline_data.dart';
 class IndicatorDataHandler {
   static int _visibleStart(double beginIdx) => max(0, beginIdx.ceil());
 
+  static int _visibleDataStart(double beginIdx) {
+    return max(0, _visibleStart(beginIdx) - 1);
+  }
+
   static int _visibleEnd(List<KLineData> klineData, double beginIdx) {
     double itemCount = KLineController.shared.itemCount;
     return min(klineData.length, (beginIdx + itemCount).ceil());
@@ -72,8 +76,7 @@ class IndicatorDataHandler {
     List<List<double>> emaData = [];
     double max = 0.0;
     double min = 0.0;
-    double itemCount = KLineController.shared.itemCount;
-    int visibleStart = _visibleStart(beginIdx);
+    int dataStart = _visibleDataStart(beginIdx);
     int visibleEnd = _visibleEnd(klineData, beginIdx);
 
     for (var i = 0; i < periods.length; ++i) {
@@ -87,7 +90,7 @@ class IndicatorDataHandler {
         double close = klineData[j].close;
 
         if (j < period - 1) {
-          if (j >= visibleStart && j < visibleEnd) {
+          if (j >= dataStart && j < visibleEnd) {
             emaList.add(-1);
           }
           sum += close;
@@ -95,7 +98,7 @@ class IndicatorDataHandler {
         } else if (j == period - 1) {
           sum += close;
           lastEma = sum / period;
-          if (j >= visibleStart && j < visibleEnd) {
+          if (j >= dataStart && j < visibleEnd) {
             emaList.add(lastEma);
           }
           continue;
@@ -105,7 +108,7 @@ class IndicatorDataHandler {
         double emaValue =
             close * period / deno + (deno - period) * lastEma / deno;
 
-        if (j >= beginIdx - 1 && j < beginIdx + itemCount) {
+        if (j >= dataStart && j < visibleEnd) {
           if (max == 0 || emaValue > max) {
             max = emaValue;
           }
@@ -115,7 +118,7 @@ class IndicatorDataHandler {
         }
 
         lastEma = emaValue;
-        if (j >= visibleStart && j < visibleEnd) {
+        if (j >= dataStart && j < visibleEnd) {
           emaList.add(emaValue);
         }
       }
@@ -138,7 +141,7 @@ class IndicatorDataHandler {
     List<double> mbList = [];
     List<double> dnList = [];
 
-    final visibleStart = _visibleStart(beginIdx);
+    final visibleStart = _visibleDataStart(beginIdx);
     final visibleEnd = _visibleEnd(klineData, beginIdx);
 
     for (int i = visibleStart; i < visibleEnd; i++) {
@@ -384,12 +387,21 @@ class IndicatorDataHandler {
     double itemCount = KLineController.shared.itemCount;
 
     double lastK = 0.0, lastD = 0.0;
+    final visibleStart = _visibleStart(beginIdx);
+    final dataStart = _visibleDataStart(beginIdx);
     final visibleEnd = _visibleEnd(klineData, beginIdx);
     for (int i = 0; i < visibleEnd; i++) {
       KLineData data = klineData[i];
       if (i == 0) {
         double rsv = (data.close - data.low) / (data.high - data.low) * 100;
         lastK = lastD = rsv;
+        if (dataStart == 0 && visibleStart > 0) {
+          kValues.add(lastK);
+          dValues.add(lastD);
+          jValues.add(lastK);
+          maxValue = lastK;
+          minValue = lastK;
+        }
         continue;
       }
 
@@ -416,7 +428,7 @@ class IndicatorDataHandler {
       double dValue = (lastD * (period3 - 1) + kValue) / period3;
       double jValue = 3 * kValue - 2 * dValue;
 
-      if (i >= beginIdx.ceil() && i < (beginIdx + itemCount).ceil()) {
+      if (i >= dataStart && i < (beginIdx + itemCount).ceil()) {
         if (kValue > maxValue || maxValue == 0.0) {
           maxValue = kValue;
         }
@@ -459,7 +471,7 @@ class IndicatorDataHandler {
     double min = 0.0;
     bool hasVisibleValue = false;
     bool hasValidPeriod = false;
-    int visibleStart = _visibleStart(beginIdx);
+    int visibleStart = _visibleDataStart(beginIdx);
     int visibleEnd = _visibleEnd(klineData, beginIdx);
 
     for (var idx = 0; idx < periods.length; ++idx) {
@@ -562,18 +574,17 @@ class IndicatorDataHandler {
     }
     List<List<double>> dataList = [];
     double max = 0.0, min = 0.0;
+    int dataStart = _visibleDataStart(beginIdx);
     for (var idx = 0; idx < periods.length; ++idx) {
       int period = periods[idx];
       List<double> wrList = [];
 
       int endIndex = _visibleEnd(klineData, beginIdx);
-      for (var i = beginIdx; i < endIndex; ++i) {
-        final dataIndex = i.ceil();
+      for (int i = dataStart; i < endIndex; ++i) {
+        final dataIndex = i;
         if (dataIndex >= klineData.length) break;
-        double end = i + 1;
-        double start = i < period ? 0 : i - period;
-        final startIndex = start.ceil();
-        final endIndex = end.ceil();
+        final startIndex = i < period ? 0 : i - period;
+        final endIndex = i + 1;
         if (startIndex == endIndex) {
           throw StateError('No element');
         }
@@ -612,6 +623,7 @@ class IndicatorDataHandler {
     double prevClose = 0.0;
 
     double itemCount = KLineController.shared.itemCount;
+    int dataStart = _visibleDataStart(beginIdx);
     double endIndex = beginIdx + itemCount;
     endIndex = endIndex < klineData.length
         ? endIndex
@@ -638,7 +650,7 @@ class IndicatorDataHandler {
 
       prevClose = data.close;
 
-      if (i >= beginIdx.ceil() && i < (beginIdx + itemCount).ceil()) {
+      if (i >= dataStart && i < (beginIdx + itemCount).ceil()) {
         obvValues.add(obv);
       }
     }

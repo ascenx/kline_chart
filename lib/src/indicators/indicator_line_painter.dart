@@ -29,6 +29,7 @@ class IndicatorLinePainter {
       double infoTopOffset = 0.0,
       List<KLineData> debugData = const [],
       int? selectedIndex,
+      int? leadingItemCount,
       bool showInfo = true}) {
     if (periods.isEmpty) return;
     if (lineColors.isEmpty) {
@@ -40,7 +41,6 @@ class IndicatorLinePainter {
     final controller = KLineController.shared;
     double spacing = controller.spacing;
     double itemW = KLineController.getItemWidth(width);
-    double itemCount = controller.itemCount;
 
     double valueOffset = maxValue - minValue;
     double indicatorX = -(spacing + itemW * 0.5);
@@ -50,6 +50,8 @@ class IndicatorLinePainter {
     for (int idx = 0; idx < periods.length; ++idx) {
       List<double> values = idx < dataList.length ? dataList[idx] : [];
       int period = periods[idx];
+      final effectiveLeadingItemCount =
+          leadingItemCount ?? _defaultLeadingItemCountForType(type);
 
       Color color =
           (idx < lineColors.length) ? lineColors[idx] : const Color(0xff333333);
@@ -59,21 +61,17 @@ class IndicatorLinePainter {
       var hasPoint = false;
       var hasLine = false;
       if (values.isNotEmpty) {
-        for (var i = beginIdx - 1; i < beginIdx + itemCount + 1; ++i) {
-          if ((i - beginIdx).ceil() >= values.length) {
-            break;
-          }
-          if (i.ceil() < period) continue;
+        for (int index = 0; index < values.length; ++index) {
+          final dataIndex = beginIdx.ceil() + index - effectiveLeadingItemCount;
+          if (dataIndex < period) continue;
           if (type != IndicatorType.obv) {
             if (type == IndicatorType.kdj) {
               int firstPeriod = periods.first;
-              if (i.ceil() < firstPeriod - 1) continue;
+              if (dataIndex < firstPeriod - 1) continue;
             } else {
-              if (i.ceil() < period - 1) continue;
+              if (dataIndex < period - 1) continue;
             }
           }
-          int index = (i - beginIdx).ceil();
-          index = index < 0 ? 0 : index;
           double value = values[index];
           if (_isInvalidLineValue(type, value)) continue;
           double indicatorY = valueOffset == 0.0
@@ -84,8 +82,9 @@ class IndicatorLinePainter {
           }
           indicatorY += controller.indicatorInfoHeight;
 
-          indicatorX =
-              index * (itemW + spacing) - itemW * 0.5 - spacing + slideOffset;
+          indicatorX = (index - effectiveLeadingItemCount) * (itemW + spacing) +
+              itemW * 0.5 +
+              slideOffset;
 
           if (!hasPoint) {
             linePath.moveTo(indicatorX, indicatorY);
@@ -115,8 +114,13 @@ class IndicatorLinePainter {
       paintInfo(canvas, size, type, dataList, periods, top,
           lineColors: lineColors,
           topOffset: infoTopOffset,
-          selectedIndex: selectedIndex);
+          selectedIndex: selectedIndex,
+          leadingItemCount: leadingItemCount);
     }
+  }
+
+  static int _defaultLeadingItemCountForType(IndicatorType type) {
+    return type == IndicatorType.ma || type == IndicatorType.maVol ? 1 : 0;
   }
 
   static bool _isInvalidLineValue(IndicatorType type, double value) {
@@ -127,22 +131,23 @@ class IndicatorLinePainter {
   }
 
   static String infoValueText(
-      IndicatorType type, List<double> values, int? selectedIndex) {
-    double? value = infoValue(type, values, selectedIndex);
+      IndicatorType type, List<double> values, int? selectedIndex,
+      {int? leadingItemCount}) {
+    double? value = infoValue(type, values, selectedIndex,
+        leadingItemCount: leadingItemCount);
     return value == null ? 'NaN' : value.toStringAsFixed(2);
   }
 
   static double? infoValue(
-      IndicatorType type, List<double> values, int? selectedIndex) {
+      IndicatorType type, List<double> values, int? selectedIndex,
+      {int? leadingItemCount}) {
     if (values.isEmpty) {
       return null;
     }
 
     if (selectedIndex != null) {
-      int valueIndex = selectedIndex;
-      if (type == IndicatorType.ma || type == IndicatorType.maVol) {
-        valueIndex += 1;
-      }
+      int valueIndex = selectedIndex +
+          (leadingItemCount ?? _defaultLeadingItemCountForType(type));
       if (valueIndex < 0 || valueIndex >= values.length) {
         return null;
       }
@@ -167,12 +172,14 @@ class IndicatorLinePainter {
   }
 
   static List<String> indicatorInfoList(IndicatorType type,
-      List<List<double>> dataList, List<int> periods, int? selectedIndex) {
+      List<List<double>> dataList, List<int> periods, int? selectedIndex,
+      {int? leadingItemCount}) {
     List<String> infoList = [];
     for (int idx = 0; idx < periods.length; ++idx) {
       List<double> values = idx < dataList.length ? dataList[idx] : [];
       int period = periods[idx];
-      String valueText = infoValueText(type, values, selectedIndex);
+      String valueText = infoValueText(type, values, selectedIndex,
+          leadingItemCount: leadingItemCount);
 
       if (type == IndicatorType.kdj) {
         if (periods.length < 3) {
@@ -201,7 +208,8 @@ class IndicatorLinePainter {
       List<List<double>> dataList, List<int> periods, double top,
       {List<Color> lineColors = const [],
       double topOffset = 0.0,
-      int? selectedIndex}) {
+      int? selectedIndex,
+      int? leadingItemCount}) {
     if (periods.isEmpty) return;
     if (lineColors.isEmpty) {
       lineColors = KLineController.shared.indicatorColors;
@@ -210,7 +218,8 @@ class IndicatorLinePainter {
       canvas,
       size,
       type,
-      indicatorInfoList(type, dataList, periods, selectedIndex),
+      indicatorInfoList(type, dataList, periods, selectedIndex,
+          leadingItemCount: leadingItemCount),
       top,
       lineColors: lineColors,
       topOffset: topOffset,

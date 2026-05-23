@@ -313,6 +313,7 @@ class KLinePainter extends CustomPainter {
 
     double indexOffset = beginIdx - beginIdx.ceil();
     double slideOffset = -indexOffset * (itemW + spacing);
+    final lineLeadingItemCount = leadingLineDataCountForBeginIndex(beginIdx);
 
     _timeLinePath.reset();
     _riseCandleBodyPath.reset();
@@ -426,12 +427,13 @@ class KLinePainter extends CustomPainter {
     }
 
     if (isShowMA || isShowEMA) {
+      final indicatorType = isShowMA ? IndicatorType.ma : IndicatorType.ema;
       List<int> indicatorPeriods = isShowMA ? [7, 30] : [7, 25];
       IndicatorLinePainter.paint(
           canvas,
           size,
           mainHeight,
-          KLineController.shared.showMainIndicators.first,
+          indicatorType,
           mainIndicatorData,
           indicatorPeriods,
           beginIdx,
@@ -440,6 +442,7 @@ class KLinePainter extends CustomPainter {
           lowest,
           top: KLineController.shared.klineMargin.top,
           lineColors: _indicatorColors,
+          leadingItemCount: isShowMA ? 1 : lineLeadingItemCount,
           showInfo: false,
           debugData: klineData);
     }
@@ -460,6 +463,7 @@ class KLinePainter extends CustomPainter {
           lowest,
           top: KLineController.shared.klineMargin.top,
           lineColors: _indicatorColors,
+          leadingItemCount: lineLeadingItemCount,
           showInfo: false);
     }
 
@@ -532,6 +536,7 @@ class KLinePainter extends CustomPainter {
             subLowestValue,
             top: subTop,
             lineColors: _indicatorColors,
+            leadingItemCount: lineLeadingItemCount,
             showInfo: false);
       }
     }
@@ -712,6 +717,10 @@ class KLinePainter extends CustomPainter {
 
   static int leadingDataCountForBeginIndex(double beginIdx) {
     return beginIdx.ceil().clamp(0, 2).toInt();
+  }
+
+  static int leadingLineDataCountForBeginIndex(double beginIdx) {
+    return beginIdx.ceil().clamp(0, 1).toInt();
   }
 
   @override

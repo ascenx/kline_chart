@@ -538,6 +538,26 @@ void main() {
       expect(result.maxValue, closeTo(50, 0.000001));
       expect(result.minValue, closeTo(16.666666666666664, 0.000001));
     });
+
+    test('line indicators include one leading value during fractional scroll',
+        () {
+      KLineController.shared.itemCount = 3;
+      const beginIdx = 1.5;
+      final data = _buildKLineDataFromCloses([10, 12, 11, 14, 13, 15]);
+
+      expect(
+          IndicatorDataHandler.ema(data, [1], beginIdx).data.single.length, 4);
+      expect(
+          IndicatorDataHandler.boll(data, 1, 2, beginIdx).data.first.length, 4);
+      expect(
+          IndicatorDataHandler.kdj(data, [3, 3, 3], beginIdx).data.first.length,
+          4);
+      expect(
+          IndicatorDataHandler.rsi(data, [1], beginIdx).data.single.length, 4);
+      expect(
+          IndicatorDataHandler.wr(data, [1], beginIdx).data.single.length, 4);
+      expect(IndicatorDataHandler.obv(data, beginIdx).data.single.length, 4);
+    });
   });
 
   group('IndicatorDataHandler.rsi', () {
@@ -785,6 +805,66 @@ void main() {
 
       expect(tester.takeException(), isNull);
     });
+
+    test('draws the latest non-MA line value at the latest candle center',
+        () async {
+      KLineController.shared.itemCount = 3;
+      KLineController.shared.spacing = 0;
+      KLineController.shared.indicatorInfoHeight = 0;
+
+      final bytes = await _paintToBytes(
+        const Size(30, 30),
+        (canvas, size) => IndicatorLinePainter.paint(
+          canvas,
+          size,
+          30,
+          IndicatorType.rsi,
+          const [
+            [50, 50, 50]
+          ],
+          const [1],
+          0,
+          0,
+          100,
+          0,
+          lineColors: const [Color(0xffff0000)],
+          showInfo: false,
+        ),
+      );
+
+      expect(_pixelAt(bytes, 24, 15, 30), isNot(const Color(0x00000000)));
+    });
+
+    test('keeps the leading non-MA line value visible during fractional scroll',
+        () async {
+      KLineController.shared.itemCount = 2;
+      KLineController.shared.spacing = 0;
+      KLineController.shared.indicatorInfoHeight = 0;
+
+      final bytes = await _paintToBytes(
+        const Size(100, 100),
+        (canvas, size) => IndicatorLinePainter.paint(
+          canvas,
+          size,
+          100,
+          IndicatorType.rsi,
+          const [
+            [50, 50, 50]
+          ],
+          const [1],
+          1.5,
+          25,
+          100,
+          0,
+          leadingItemCount: 1,
+          lineColors: const [Color(0xffff0000)],
+          showInfo: false,
+        ),
+      );
+
+      expect(_pixelAt(bytes, 2, 50, 100), isNot(const Color(0x00000000)));
+      expect(_pixelAt(bytes, 98, 50, 100), isNot(const Color(0x00000000)));
+    });
   });
 
   group('SAR main indicator rendering', () {
@@ -1020,6 +1100,18 @@ void main() {
       );
 
       expect(valueText, '20.00');
+    });
+
+    test('uses the selected line indicator value when data has a leading point',
+        () {
+      final valueText = IndicatorLinePainter.infoValueText(
+        IndicatorType.rsi,
+        [5, 10, 20, 30],
+        2,
+        leadingItemCount: 1,
+      );
+
+      expect(valueText, '30.00');
     });
 
     test('uses the touched candle MA value when MA data has a leading point',

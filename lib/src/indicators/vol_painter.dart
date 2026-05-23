@@ -132,6 +132,7 @@ class VolPainter {
         top: originBtm - height,
         infoTopOffset: 0.0,
         selectedIndex: selectedIndex,
+        leadingItemCount: 1,
         showInfo: showInfo);
   }
 

@@ -51,6 +51,9 @@ class KLineIndicatorInfoPainter extends CustomPainter {
       final type = isShowMA ? IndicatorType.ma : IndicatorType.ema;
       final periods = _indicatorDataCache.periodsFor(type);
       final result = _indicatorResult(type);
+      final leadingItemCount = isShowMA
+          ? 1
+          : KLinePainter.leadingLineDataCountForBeginIndex(beginIdx);
       IndicatorLinePainter.paintInfo(
         canvas,
         size,
@@ -59,6 +62,7 @@ class KLineIndicatorInfoPainter extends CustomPainter {
         periods,
         _config.klineTop,
         selectedIndex: selectedIndex,
+        leadingItemCount: leadingItemCount,
       );
     }
 
@@ -74,6 +78,8 @@ class KLineIndicatorInfoPainter extends CustomPainter {
         periods,
         _config.klineTop,
         selectedIndex: selectedIndex,
+        leadingItemCount:
+            KLinePainter.leadingLineDataCountForBeginIndex(beginIdx),
       );
     }
 
@@ -117,6 +123,7 @@ class KLineIndicatorInfoPainter extends CustomPainter {
           periods,
           subTop,
           selectedIndex: selectedIndex,
+          leadingItemCount: 1,
         );
       } else if (type == IndicatorType.macd) {
         final result = _indicatorResult(IndicatorType.macd);
@@ -143,6 +150,8 @@ class KLineIndicatorInfoPainter extends CustomPainter {
           subTop,
           lineColors: _config.indicatorColors,
           selectedIndex: selectedIndex,
+          leadingItemCount:
+              KLinePainter.leadingLineDataCountForBeginIndex(beginIdx),
         );
       }
     }
