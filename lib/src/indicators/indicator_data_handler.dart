@@ -293,7 +293,7 @@ class IndicatorDataHandler {
     List<double> visibleSignal = [];
     List<double> visibleHistogram = [];
     int visibleStart = _visibleStart(beginIdx);
-    int dataStart = visibleStart > 0 ? visibleStart - 1 : 0;
+    int dataStart = visibleStart - min(2, visibleStart);
     int visibleEnd = _visibleEnd(klineData, beginIdx);
 
     double? fastEma;

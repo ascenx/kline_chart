@@ -489,7 +489,7 @@ void main() {
       expect(result.minValue, closeTo(-0.290179, 0.000001));
     });
 
-    test('includes a leading value for fractional scroll alignment', () {
+    test('includes leading values for fractional scroll alignment', () {
       final data =
           _buildKLineDataFromCloses([10, 12, 11, 14, 13, 15, 16, 14, 17, 18]);
 
@@ -499,10 +499,13 @@ void main() {
       KLineController.shared.itemCount = 3;
       final fractional = IndicatorDataHandler.macd(data, [3, 6, 3], 5.5);
 
-      expect(fractional.data[0].length, 4);
-      expect(fractional.data[0].first, closeTo(full.data[0][5], 0.000001));
-      expect(fractional.data[1].first, closeTo(full.data[1][5], 0.000001));
-      expect(fractional.data[2].first, closeTo(full.data[2][5], 0.000001));
+      expect(fractional.data[0].length, 5);
+      expect(fractional.data[0][0], closeTo(full.data[0][4], 0.000001));
+      expect(fractional.data[0][1], closeTo(full.data[0][5], 0.000001));
+      expect(fractional.data[1][0], closeTo(full.data[1][4], 0.000001));
+      expect(fractional.data[1][1], closeTo(full.data[1][5], 0.000001));
+      expect(fractional.data[2][0], closeTo(full.data[2][4], 0.000001));
+      expect(fractional.data[2][1], closeTo(full.data[2][5], 0.000001));
     });
 
     test('classifies MACD histogram bars as solid or hollow', () {
@@ -588,6 +591,34 @@ void main() {
       );
 
       expect(_pixelAt(bytes, 10, 50, 100), const Color(0xff4caf50));
+    });
+
+    test('keeps the leading histogram hollow when it decreases', () async {
+      KLineController.shared.itemCount = 2;
+      KLineController.shared.spacing = 0;
+      KLineController.shared.indicatorInfoHeight = 0;
+
+      final bytes = await _paintToBytes(
+        const Size(100, 100),
+        (canvas, size) => MACDPainter().paintData(
+          canvas,
+          size,
+          const [
+            [-1, -1, -1],
+            [-1, -1, -1],
+            [2, 1, 1],
+          ],
+          100,
+          const [12, 26, 9],
+          25,
+          2,
+          0,
+          leadingItemCount: 2,
+          showInfo: false,
+        ),
+      );
+
+      expect(_pixelAt(bytes, 10, 75, 100), const Color(0x00000000));
     });
   });
 

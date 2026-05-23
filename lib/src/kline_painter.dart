@@ -711,7 +711,7 @@ class KLinePainter extends CustomPainter {
   }
 
   static int leadingDataCountForBeginIndex(double beginIdx) {
-    return beginIdx.ceil() > 0 ? 1 : 0;
+    return beginIdx.ceil().clamp(0, 2).toInt();
   }
 
   @override
