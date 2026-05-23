@@ -28,11 +28,18 @@ class VolPainter {
     ..color = Colors.red
     ..isAntiAlias = true;
 
+  final Path _riseVolumePath = Path();
+  final Path _fallVolumePath = Path();
+
   void paint(Canvas canvas, Size size, double max, double slideOffset,
       {int? selectedIndex, bool showInfo = true}) {
     if (klineData.isEmpty) return;
     riseRectPaint.color = _style.riseColor;
     fallRectPaint.color = _style.fallColor;
+    _riseVolumePath.reset();
+    _fallVolumePath.reset();
+    var hasRiseVolume = false;
+    var hasFallVolume = false;
 
     double height = KLineController.shared.subIndicatorHeight;
     double width = size.width;
@@ -86,12 +93,23 @@ class VolPainter {
               volume /
               valueOffset;
 
-      canvas.drawRect(
-          Rect.fromLTWH(
-              rectLeft + slideOffset, originBtm - volumeH, itemW, volumeH),
-          close > open ? riseRectPaint : fallRectPaint);
+      final volumeRect = Rect.fromLTWH(
+          rectLeft + slideOffset, originBtm - volumeH, itemW, volumeH);
+      if (close > open) {
+        _riseVolumePath.addRect(volumeRect);
+        hasRiseVolume = true;
+      } else {
+        _fallVolumePath.addRect(volumeRect);
+        hasFallVolume = true;
+      }
 
       rectLeft += (itemW + spacing);
+    }
+    if (hasRiseVolume) {
+      canvas.drawPath(_riseVolumePath, riseRectPaint);
+    }
+    if (hasFallVolume) {
+      canvas.drawPath(_fallVolumePath, fallRectPaint);
     }
 
     // debug

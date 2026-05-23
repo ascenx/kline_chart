@@ -9,6 +9,7 @@ class SARPainter {
   final Paint _pointPaint = Paint()
     ..style = PaintingStyle.fill
     ..isAntiAlias = true;
+  final Path _pointPath = Path();
 
   SARPainter([this.dataList = const []]);
 
@@ -67,6 +68,8 @@ class SARPainter {
             ? lineColors.first
             : KLineController.shared.sarColor);
     _pointPaint.color = resolvedPointColor;
+    _pointPath.reset();
+    var hasPoint = false;
 
     for (int i = 0; i < values.length; ++i) {
       final value = values[i];
@@ -78,7 +81,13 @@ class SARPainter {
           ? drawAreaHeight * 0.5 + contentTop
           : drawAreaHeight * (1 - (value - minValue) / valueOffset) +
               contentTop;
-      canvas.drawCircle(Offset(x, y), radius, _pointPaint);
+      _pointPath.addOval(
+          Rect.fromLTWH(x - radius, y - radius, radius * 2, radius * 2));
+      hasPoint = true;
+    }
+
+    if (hasPoint) {
+      canvas.drawPath(_pointPath, _pointPaint);
     }
   }
 }

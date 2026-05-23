@@ -104,6 +104,10 @@ class KLinePainter extends CustomPainter {
       ;
 
   final _timeLinePath = Path();
+  final _riseCandleBodyPath = Path();
+  final _fallCandleBodyPath = Path();
+  final _riseCandleWickPath = Path();
+  final _fallCandleWickPath = Path();
 
   // draw kline
 
@@ -310,7 +314,13 @@ class KLinePainter extends CustomPainter {
     double slideOffset = -indexOffset * (itemW + spacing);
 
     _timeLinePath.reset();
+    _riseCandleBodyPath.reset();
+    _fallCandleBodyPath.reset();
+    _riseCandleWickPath.reset();
+    _fallCandleWickPath.reset();
     bool hasTimeLineStart = false;
+    var hasRiseCandle = false;
+    var hasFallCandle = false;
 
     for (var i = beginIdx - 1; i < beginIdx + itemCount; ++i) {
       if (i >= klineData.length) break;
@@ -365,20 +375,22 @@ class KLinePainter extends CustomPainter {
           double rectTop =
               _valueToY(open, lowest, valueOffset, mainHeight, mainTopMargin);
           rectTop -= itemH; // rise starts at the top
-          canvas.drawRect(
-              Rect.fromLTWH(rectLeft + slideOffset, rectTop, itemW, itemH),
-              _riseRectPaint);
-          canvas.drawLine(
-              Offset(lineX, lineTop), Offset(lineX, lineBtm), _riseLinePaint);
+          _riseCandleBodyPath.addRect(
+              Rect.fromLTWH(rectLeft + slideOffset, rectTop, itemW, itemH));
+          _riseCandleWickPath
+            ..moveTo(lineX, lineTop)
+            ..lineTo(lineX, lineBtm);
+          hasRiseCandle = true;
         } else {
           double itemH = _valueHeight(open - close, valueOffset, mainHeight);
           double rectTop =
               _valueToY(open, lowest, valueOffset, mainHeight, mainTopMargin);
-          canvas.drawRect(
-              Rect.fromLTWH(rectLeft + slideOffset, rectTop, itemW, itemH),
-              _fallRectPaint);
-          canvas.drawLine(
-              Offset(lineX, lineTop), Offset(lineX, lineBtm), _fallLinePaint);
+          _fallCandleBodyPath.addRect(
+              Rect.fromLTWH(rectLeft + slideOffset, rectTop, itemW, itemH));
+          _fallCandleWickPath
+            ..moveTo(lineX, lineTop)
+            ..lineTo(lineX, lineBtm);
+          hasFallCandle = true;
         }
       }
 
@@ -394,6 +406,18 @@ class KLinePainter extends CustomPainter {
 
       canvas.drawPath(_timeLinePath, _timeLineAreaPaint);
     } else {
+      if (hasRiseCandle) {
+        canvas.drawPath(_riseCandleBodyPath, _riseRectPaint);
+      }
+      if (hasFallCandle) {
+        canvas.drawPath(_fallCandleBodyPath, _fallRectPaint);
+      }
+      if (hasRiseCandle) {
+        canvas.drawPath(_riseCandleWickPath, _riseLinePaint);
+      }
+      if (hasFallCandle) {
+        canvas.drawPath(_fallCandleWickPath, _fallLinePaint);
+      }
       _drawHighestLowestText(
           canvas, "$mainHighest", Offset(highestX, highestY), size);
       _drawHighestLowestText(

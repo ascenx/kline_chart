@@ -33,12 +33,17 @@ class MACDPainter {
     ..style = PaintingStyle.stroke
     ..strokeWidth = 0.5
     ..color = Colors.blueGrey.withValues(alpha: 0.3);
+  final Path _positiveHistogramPath = Path();
+  final Path _negativeHistogramPath = Path();
+  final Path _positiveStrokeHistogramPath = Path();
+  final Path _negativeStrokeHistogramPath = Path();
   final Paint _linePaint = Paint()
     ..style = PaintingStyle.stroke
     ..isAntiAlias = true
     ..strokeCap = StrokeCap.round
     ..strokeJoin = StrokeJoin.round
     ..strokeWidth = 1;
+  final Path _linePath = Path();
 
   void paint(
     Canvas canvas,
@@ -143,6 +148,14 @@ class MACDPainter {
     );
     double barWidth = itemW * 0.7;
     double previousValue = 0.0;
+    _positiveHistogramPath.reset();
+    _negativeHistogramPath.reset();
+    _positiveStrokeHistogramPath.reset();
+    _negativeStrokeHistogramPath.reset();
+    var hasPositiveHistogram = false;
+    var hasNegativeHistogram = false;
+    var hasPositiveStrokeHistogram = false;
+    var hasNegativeStrokeHistogram = false;
 
     for (int i = 0; i < histogram.length; ++i) {
       double value = histogram[i];
@@ -162,11 +175,36 @@ class MACDPainter {
         height = 1.0;
       }
       bool isSolid = isSolidHistogramBar(value, previousValue);
-      canvas.drawRect(
-        Rect.fromLTWH(centerX - barWidth * 0.5, topY, barWidth, height),
-        _histogramPaint(value, isSolid),
-      );
+      final rect =
+          Rect.fromLTWH(centerX - barWidth * 0.5, topY, barWidth, height);
+      if (value >= 0) {
+        if (isSolid) {
+          _positiveHistogramPath.addRect(rect);
+          hasPositiveHistogram = true;
+        } else {
+          _positiveStrokeHistogramPath.addRect(rect);
+          hasPositiveStrokeHistogram = true;
+        }
+      } else if (isSolid) {
+        _negativeHistogramPath.addRect(rect);
+        hasNegativeHistogram = true;
+      } else {
+        _negativeStrokeHistogramPath.addRect(rect);
+        hasNegativeStrokeHistogram = true;
+      }
       previousValue = value;
+    }
+    if (hasPositiveHistogram) {
+      canvas.drawPath(_positiveHistogramPath, _positivePaint);
+    }
+    if (hasPositiveStrokeHistogram) {
+      canvas.drawPath(_positiveStrokeHistogramPath, _positiveStrokePaint);
+    }
+    if (hasNegativeHistogram) {
+      canvas.drawPath(_negativeHistogramPath, _negativePaint);
+    }
+    if (hasNegativeStrokeHistogram) {
+      canvas.drawPath(_negativeStrokeHistogramPath, _negativeStrokePaint);
     }
   }
 
@@ -184,13 +222,13 @@ class MACDPainter {
     Color color,
   ) {
     _linePaint.color = color;
+    _linePath.reset();
 
-    double? lastX;
-    double? lastY;
+    var hasPoint = false;
+    var hasLine = false;
     for (int i = 0; i < values.length; ++i) {
       if (_isInvalidValue(values[i])) {
-        lastX = null;
-        lastY = null;
+        hasPoint = false;
         continue;
       }
       double x = i * itemExtent + itemW * 0.5 + slideOffset;
@@ -202,11 +240,16 @@ class MACDPainter {
         maxValue,
         minValue,
       );
-      if (lastX != null && lastY != null) {
-        canvas.drawLine(Offset(lastX, lastY), Offset(x, y), _linePaint);
+      if (!hasPoint) {
+        _linePath.moveTo(x, y);
+        hasPoint = true;
+      } else {
+        _linePath.lineTo(x, y);
+        hasLine = true;
       }
-      lastX = x;
-      lastY = y;
+    }
+    if (hasLine) {
+      canvas.drawPath(_linePath, _linePaint);
     }
   }
 
@@ -299,13 +342,6 @@ class MACDPainter {
       return lineColors[index];
     }
     return fallback;
-  }
-
-  Paint _histogramPaint(double value, bool isSolid) {
-    if (value >= 0) {
-      return isSolid ? _positivePaint : _positiveStrokePaint;
-    }
-    return isSolid ? _negativePaint : _negativeStrokePaint;
   }
 
   bool _isInvalidValue(double value) => value == -1.0;

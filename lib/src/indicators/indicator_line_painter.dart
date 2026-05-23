@@ -3,6 +3,14 @@ import '../kline_controller.dart';
 import '../kline_data.dart';
 
 class IndicatorLinePainter {
+  static final Paint _linePaint = Paint()
+    ..style = PaintingStyle.stroke
+    ..isAntiAlias = true
+    ..strokeCap = StrokeCap.round
+    ..strokeJoin = StrokeJoin.round
+    ..strokeWidth = 1;
+  static final Path _linePath = Path();
+
   static void paint(
       Canvas canvas,
       Size size,
@@ -27,18 +35,15 @@ class IndicatorLinePainter {
 
     double width = size.width;
 
-    double spacing = KLineController.shared.spacing;
+    final controller = KLineController.shared;
+    double spacing = controller.spacing;
     double itemW = KLineController.getItemWidth(width);
-    double itemCount = KLineController.shared.itemCount;
+    double itemCount = controller.itemCount;
 
     double valueOffset = maxValue - minValue;
     double indicatorX = -(spacing + itemW * 0.5);
-    final linePaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..isAntiAlias = true
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round
-      ..strokeWidth = 1;
+    final linePaint = _linePaint;
+    final linePath = _linePath;
 
     for (int idx = 0; idx < periods.length; ++idx) {
       List<double> values = idx < dataList.length ? dataList[idx] : [];
@@ -48,8 +53,9 @@ class IndicatorLinePainter {
           (idx < lineColors.length) ? lineColors[idx] : const Color(0xff333333);
       linePaint.color = color;
 
-      double lastY = 0.0;
-      double lastX = 0.0;
+      linePath.reset();
+      var hasPoint = false;
+      var hasLine = false;
       if (values.isNotEmpty) {
         for (var i = beginIdx - 1; i < beginIdx + itemCount + 1; ++i) {
           if ((i - beginIdx).ceil() >= values.length) {
@@ -72,35 +78,35 @@ class IndicatorLinePainter {
               ? drawAreaHeight * 0.5 + top
               : drawAreaHeight * (1 - (value - minValue) / valueOffset) + top;
           if (type.isMain) {
-            indicatorY += KLineController.shared.mainIndicatorInfoMargin;
+            indicatorY += controller.mainIndicatorInfoMargin;
           }
-          indicatorY += KLineController.shared.indicatorInfoHeight;
+          indicatorY += controller.indicatorInfoHeight;
 
           indicatorX =
               index * (itemW + spacing) - itemW * 0.5 - spacing + slideOffset;
 
-          if (lastX == 0.0 && lastY == 0.0) {
-            lastX = indicatorX;
-            lastY = indicatorY;
+          if (!hasPoint) {
+            linePath.moveTo(indicatorX, indicatorY);
+            hasPoint = true;
+          } else {
+            linePath.lineTo(indicatorX, indicatorY);
+            hasLine = true;
           }
-
-          canvas.drawLine(
-              Offset(lastX, lastY), Offset(indicatorX, indicatorY), linePaint);
-          lastY = indicatorY;
-          lastX = indicatorX;
         }
+      }
+      if (hasLine) {
+        canvas.drawPath(linePath, linePaint);
       }
     }
 
     // line debug area
-    if (KLineController.shared.isDebug) {
-      double originY = top + KLineController.shared.indicatorInfoHeight;
-      if (type.isMain && KLineController.shared.showMainIndicators.isNotEmpty) {
-        originY += KLineController.shared.mainIndicatorInfoMargin;
+    if (controller.isDebug) {
+      double originY = top + controller.indicatorInfoHeight;
+      if (type.isMain && controller.showMainIndicators.isNotEmpty) {
+        originY += controller.mainIndicatorInfoMargin;
       }
       Rect rect = Rect.fromLTWH(0, originY, size.width, drawAreaHeight);
-      KLineController.shared
-          .drawDebugRect(canvas, rect, Colors.green.withAlpha(50));
+      controller.drawDebugRect(canvas, rect, Colors.green.withAlpha(50));
     }
 
     if (showInfo) {
