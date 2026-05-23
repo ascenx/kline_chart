@@ -59,6 +59,7 @@ class MACDPainter {
     double top = 0.0,
     List<Color> lineColors = const [],
     int? selectedIndex,
+    int leadingItemCount = 0,
     bool showInfo = true,
   }) {
     paintData(
@@ -73,6 +74,7 @@ class MACDPainter {
       top: top,
       lineColors: lineColors,
       selectedIndex: selectedIndex,
+      leadingItemCount: leadingItemCount,
       showInfo: showInfo,
     );
   }
@@ -89,6 +91,7 @@ class MACDPainter {
     double top = 0.0,
     List<Color> lineColors = const [],
     int? selectedIndex,
+    int leadingItemCount = 0,
     bool showInfo = true,
   }) {
     if (dataList.length < 3 || periods.length != 3) return;
@@ -118,11 +121,14 @@ class MACDPainter {
     canvas.drawLine(
         Offset(0, zeroY), Offset(size.width, zeroY), _zeroLinePaint);
     _drawHistogram(canvas, drawAreaHeight, contentTop, itemW, itemExtent,
-        slideOffset, valueOffset, maxValue, minValue, dataList[2]);
+        slideOffset, valueOffset, maxValue, minValue, dataList[2],
+        leadingItemCount: leadingItemCount);
     _drawLine(canvas, drawAreaHeight, contentTop, itemW, itemExtent,
-        slideOffset, valueOffset, maxValue, minValue, dataList[0], macdColor);
+        slideOffset, valueOffset, maxValue, minValue, dataList[0], macdColor,
+        leadingItemCount: leadingItemCount);
     _drawLine(canvas, drawAreaHeight, contentTop, itemW, itemExtent,
-        slideOffset, valueOffset, maxValue, minValue, dataList[1], signalColor);
+        slideOffset, valueOffset, maxValue, minValue, dataList[1], signalColor,
+        leadingItemCount: leadingItemCount);
     if (showInfo) {
       paintInfoForData(canvas, size, dataList, periods, top,
           lineColors: lineColors, selectedIndex: selectedIndex);
@@ -130,17 +136,17 @@ class MACDPainter {
   }
 
   void _drawHistogram(
-    Canvas canvas,
-    double drawAreaHeight,
-    double contentTop,
-    double itemW,
-    double itemExtent,
-    double slideOffset,
-    double valueOffset,
-    double maxValue,
-    double minValue,
-    List<double> histogram,
-  ) {
+      Canvas canvas,
+      double drawAreaHeight,
+      double contentTop,
+      double itemW,
+      double itemExtent,
+      double slideOffset,
+      double valueOffset,
+      double maxValue,
+      double minValue,
+      List<double> histogram,
+      {int leadingItemCount = 0}) {
     double zeroY = _valueToY(
       0.0,
       drawAreaHeight,
@@ -163,7 +169,8 @@ class MACDPainter {
     for (int i = 0; i < histogram.length; ++i) {
       double value = histogram[i];
       if (_isInvalidValue(value)) continue;
-      double centerX = i * itemExtent + itemW * 0.5 + slideOffset;
+      double centerX =
+          (i - leadingItemCount) * itemExtent + itemW * 0.5 + slideOffset;
       double valueY = _valueToY(
         value,
         drawAreaHeight,
@@ -212,18 +219,18 @@ class MACDPainter {
   }
 
   void _drawLine(
-    Canvas canvas,
-    double drawAreaHeight,
-    double contentTop,
-    double itemW,
-    double itemExtent,
-    double slideOffset,
-    double valueOffset,
-    double maxValue,
-    double minValue,
-    List<double> values,
-    Color color,
-  ) {
+      Canvas canvas,
+      double drawAreaHeight,
+      double contentTop,
+      double itemW,
+      double itemExtent,
+      double slideOffset,
+      double valueOffset,
+      double maxValue,
+      double minValue,
+      List<double> values,
+      Color color,
+      {int leadingItemCount = 0}) {
     _linePaint.color = color;
     _linePath.reset();
 
@@ -234,7 +241,8 @@ class MACDPainter {
         hasPoint = false;
         continue;
       }
-      double x = i * itemExtent + itemW * 0.5 + slideOffset;
+      double x =
+          (i - leadingItemCount) * itemExtent + itemW * 0.5 + slideOffset;
       double y = _valueToY(
         values[i],
         drawAreaHeight,

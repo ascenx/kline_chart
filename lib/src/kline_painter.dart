@@ -514,6 +514,7 @@ class KLinePainter extends CustomPainter {
             subLowestValue,
             top: subTop,
             lineColors: _indicatorColors,
+            leadingItemCount: leadingDataCountForBeginIndex(beginIdx),
             showInfo: false);
       }
 
@@ -707,6 +708,10 @@ class KLinePainter extends CustomPainter {
     );
     final visibleStart = beginIdx.ceil().clamp(0, dataLength).toInt();
     return dataIndex - visibleStart;
+  }
+
+  static int leadingDataCountForBeginIndex(double beginIdx) {
+    return beginIdx.ceil() > 0 ? 1 : 0;
   }
 
   @override

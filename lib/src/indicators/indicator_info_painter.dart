@@ -120,6 +120,8 @@ class KLineIndicatorInfoPainter extends CustomPainter {
         );
       } else if (type == IndicatorType.macd) {
         final result = _indicatorResult(IndicatorType.macd);
+        final leadingDataCount =
+            KLinePainter.leadingDataCountForBeginIndex(beginIdx);
         MACDPainter.paintInfoForData(
           canvas,
           size,
@@ -127,7 +129,8 @@ class KLineIndicatorInfoPainter extends CustomPainter {
           _indicatorDataCache.periodsFor(type),
           subTop,
           lineColors: _config.indicatorColors,
-          selectedIndex: selectedIndex,
+          selectedIndex:
+              selectedIndex == null ? null : selectedIndex + leadingDataCount,
         );
       } else if (type.isLine) {
         final result = _indicatorResult(type).data;

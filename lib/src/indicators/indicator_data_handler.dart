@@ -293,6 +293,7 @@ class IndicatorDataHandler {
     List<double> visibleSignal = [];
     List<double> visibleHistogram = [];
     int visibleStart = _visibleStart(beginIdx);
+    int dataStart = visibleStart > 0 ? visibleStart - 1 : 0;
     int visibleEnd = _visibleEnd(klineData, beginIdx);
 
     double? fastEma;
@@ -310,7 +311,7 @@ class IndicatorDataHandler {
       }
 
       if (i < slowPeriod - 1) {
-        if (i >= visibleStart && i < visibleEnd) {
+        if (i >= dataStart && i < visibleEnd) {
           visibleMacd.add(-1);
           visibleSignal.add(-1);
           visibleHistogram.add(-1);
@@ -328,7 +329,7 @@ class IndicatorDataHandler {
           : macd * signalAlpha + signalEma * (1 - signalAlpha);
       double hist = macd - signalEma;
 
-      if (i >= visibleStart && i < visibleEnd) {
+      if (i >= dataStart && i < visibleEnd) {
         visibleMacd.add(macd);
         visibleSignal.add(signalEma);
         visibleHistogram.add(hist);

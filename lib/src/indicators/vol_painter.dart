@@ -60,7 +60,7 @@ class VolPainter {
     }
 
     double valueOffset = max;
-    double rectLeft = 0;
+    double rectLeft = -(itemW + spacing);
 
     List showSubIndicators = KLineController.shared.showSubIndicators;
     int subIndicatorCount = showSubIndicators.length;
@@ -78,7 +78,7 @@ class VolPainter {
     if (endIndex > klineData.length) {
       endIndex = klineData.length.toDouble();
     }
-    for (var i = beginIdx; i < endIndex; ++i) {
+    for (var i = beginIdx - 1; i < endIndex; ++i) {
       final dataIndex = i.ceil();
       if (dataIndex >= klineData.length) break;
       KLineData data = klineData[dataIndex < 0 ? 0 : dataIndex];

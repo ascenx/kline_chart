@@ -489,6 +489,22 @@ void main() {
       expect(result.minValue, closeTo(-0.290179, 0.000001));
     });
 
+    test('includes a leading value for fractional scroll alignment', () {
+      final data =
+          _buildKLineDataFromCloses([10, 12, 11, 14, 13, 15, 16, 14, 17, 18]);
+
+      KLineController.shared.itemCount = 10;
+      final full = IndicatorDataHandler.macd(data, [3, 6, 3], 0);
+
+      KLineController.shared.itemCount = 3;
+      final fractional = IndicatorDataHandler.macd(data, [3, 6, 3], 5.5);
+
+      expect(fractional.data[0].length, 4);
+      expect(fractional.data[0].first, closeTo(full.data[0][5], 0.000001));
+      expect(fractional.data[1].first, closeTo(full.data[1][5], 0.000001));
+      expect(fractional.data[2].first, closeTo(full.data[2][5], 0.000001));
+    });
+
     test('classifies MACD histogram bars as solid or hollow', () {
       expect(MACDPainter.isSolidHistogramBar(0.3, 0.2), isTrue);
       expect(MACDPainter.isSolidHistogramBar(0.2, 0.3), isFalse);
@@ -543,6 +559,35 @@ void main() {
       await tester.pump();
 
       expect(tester.takeException(), isNull);
+    });
+
+    test('keeps the leading histogram bar visible during fractional scroll',
+        () async {
+      KLineController.shared.itemCount = 2;
+      KLineController.shared.spacing = 0;
+      KLineController.shared.indicatorInfoHeight = 0;
+
+      final bytes = await _paintToBytes(
+        const Size(100, 100),
+        (canvas, size) => MACDPainter().paintData(
+          canvas,
+          size,
+          const [
+            [-1, -1, -1],
+            [-1, -1, -1],
+            [1, 1, 1],
+          ],
+          100,
+          const [12, 26, 9],
+          25,
+          1,
+          0,
+          leadingItemCount: 1,
+          showInfo: false,
+        ),
+      );
+
+      expect(_pixelAt(bytes, 10, 50, 100), const Color(0xff4caf50));
     });
   });
 
@@ -630,6 +675,28 @@ void main() {
       );
 
       expect(_pixelAt(bytes, 50, 50, 100), const Color(0xff22cc88));
+    });
+
+    test('keeps the leading volume bar visible during fractional scroll',
+        () async {
+      KLineController.shared.itemCount = 2;
+      KLineController.shared.spacing = 0;
+      KLineController.shared.indicatorInfoHeight = 0;
+      KLineController.shared.subIndicatorHeight = 100;
+      KLineController.shared.showSubIndicators = [IndicatorType.vol];
+      KLineController.shared.volumeStyle = const KLineVolumeStyle(
+        riseColor: Color(0xff22cc88),
+        fallColor: Color(0xffdd4455),
+      );
+
+      final data = _buildKLineData(4);
+      final bytes = await _paintToBytes(
+        const Size(100, 100),
+        (canvas, size) =>
+            VolPainter(data, 1.5).paint(canvas, size, 1, 25, showInfo: false),
+      );
+
+      expect(_pixelAt(bytes, 10, 50, 100), const Color(0xff22cc88));
     });
 
     test('uses configured crosshair style', () async {
