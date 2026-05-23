@@ -76,6 +76,15 @@ class KLineController {
   /// current display item count (candle count)
   double itemCount = 30;
 
+  /// Empty candle slots shown after the latest data item when aligned to the end.
+  double trailingBlankItemCount = 5;
+
+  /// Maximum empty candle slots that can be revealed after the latest data item.
+  double maxTrailingBlankItemCount = 20;
+
+  /// Minimum real data items kept visible when scrolled to the trailing blank edge.
+  double minTrailingVisibleItemCount = 4;
+
   /// spacing between candle
   double spacing = 2.0;
 
@@ -226,6 +235,8 @@ class KLineController {
     required double itemExtent,
     required double itemCount,
     required int dataLength,
+    double trailingBlankItemCount = 0,
+    double minTrailingVisibleItemCount = 3,
   }) {
     if (dataLength <= 0 || itemCount <= 0 || itemExtent <= 0) {
       return 0.0;
@@ -236,8 +247,48 @@ class KLineController {
       return 0.0;
     }
 
-    final maxBeginIndex = max(0.0, dataLength - itemCount);
+    final maxBeginIndex = maxBeginIndexFor(
+      dataLength: dataLength,
+      itemCount: itemCount,
+      trailingBlankItemCount: trailingBlankItemCount,
+      minTrailingVisibleItemCount: minTrailingVisibleItemCount,
+    );
     return rawBeginIndex.clamp(0.0, maxBeginIndex).toDouble();
+  }
+
+  static double maxBeginIndexFor({
+    required int dataLength,
+    required double itemCount,
+    double trailingBlankItemCount = 0,
+    double minTrailingVisibleItemCount = 3,
+  }) {
+    if (dataLength <= 0 || itemCount <= 0) {
+      return 0.0;
+    }
+
+    final effectiveTrailingBlankItemCount = effectiveTrailingBlankItemCountFor(
+      itemCount: itemCount,
+      trailingBlankItemCount: trailingBlankItemCount,
+      minTrailingVisibleItemCount: minTrailingVisibleItemCount,
+    );
+    return max(0.0, dataLength - itemCount + effectiveTrailingBlankItemCount);
+  }
+
+  static double effectiveTrailingBlankItemCountFor({
+    required double itemCount,
+    required double trailingBlankItemCount,
+    required double minTrailingVisibleItemCount,
+  }) {
+    if (itemCount <= 0 || trailingBlankItemCount <= 0) {
+      return 0.0;
+    }
+
+    final visibleItemFloor =
+        minTrailingVisibleItemCount.clamp(1.0, itemCount).toDouble();
+    final maxTrailingBlankItemCount = max(0.0, itemCount - visibleItemFloor);
+    return trailingBlankItemCount
+        .clamp(0.0, maxTrailingBlankItemCount)
+        .toDouble();
   }
 
   static KLineZoomResult zoomForScale({
@@ -250,6 +301,8 @@ class KLineController {
     required int dataLength,
     required double minItemCount,
     required double maxItemCount,
+    double trailingBlankItemCount = 0,
+    double minTrailingVisibleItemCount = 3,
   }) {
     if (dataLength <= 0 || startItemCount <= 0 || viewportWidth <= 0) {
       return const KLineZoomResult(beginIndex: 0.0, itemCount: 0.0);
@@ -266,7 +319,12 @@ class KLineController {
     final currentFocalRatio = (currentFocalDx / viewportWidth).clamp(0.0, 1.0);
     final focalDataIndex = startBeginIndex + startItemCount * startFocalRatio;
     final rawBeginIndex = focalDataIndex - nextItemCount * currentFocalRatio;
-    final maxBeginIndex = max(0.0, dataLength - nextItemCount);
+    final maxBeginIndex = maxBeginIndexFor(
+      dataLength: dataLength,
+      itemCount: nextItemCount,
+      trailingBlankItemCount: trailingBlankItemCount,
+      minTrailingVisibleItemCount: minTrailingVisibleItemCount,
+    );
 
     return KLineZoomResult(
       beginIndex: rawBeginIndex.clamp(0.0, maxBeginIndex).toDouble(),

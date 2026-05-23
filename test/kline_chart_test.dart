@@ -41,6 +41,9 @@ void main() {
     KLineController.shared.sarIncrement = 0.02;
     KLineController.shared.sarMax = 0.2;
     KLineController.shared.sarColor = Colors.orange;
+    KLineController.shared.trailingBlankItemCount = 0;
+    KLineController.shared.maxTrailingBlankItemCount = 0;
+    KLineController.shared.minTrailingVisibleItemCount = 3;
     KLineController.shared.showTimeChart = false;
     KLineController.shared.longPressOffset.update(Offset.zero);
   });
@@ -80,6 +83,72 @@ void main() {
         itemExtent: 12,
         itemCount: 30,
         dataLength: 20,
+      );
+
+      expect(beginIndex, 0);
+    });
+
+    test('allows configured trailing blank slots after the latest candle', () {
+      const dataLength = 100;
+      const itemCount = 30.0;
+      const itemExtent = 12.0;
+      const maxBeginIndex = dataLength - itemCount + 10;
+      const trailingBlankOffset = (maxBeginIndex + 0.75) * itemExtent;
+
+      final beginIndex = KLineController.beginIndexForScrollOffset(
+        offset: trailingBlankOffset,
+        itemExtent: itemExtent,
+        itemCount: itemCount,
+        dataLength: dataLength,
+        trailingBlankItemCount: 10,
+        minTrailingVisibleItemCount: 3,
+      );
+
+      expect(beginIndex, maxBeginIndex);
+    });
+
+    test('keeps the configured minimum real candles visible at the end', () {
+      const dataLength = 100;
+      const itemCount = 30.0;
+      const itemExtent = 12.0;
+      const maxBeginIndex = dataLength - 3;
+      const trailingBlankOffset = (maxBeginIndex + 10) * itemExtent;
+
+      final beginIndex = KLineController.beginIndexForScrollOffset(
+        offset: trailingBlankOffset,
+        itemExtent: itemExtent,
+        itemCount: itemCount,
+        dataLength: dataLength,
+        trailingBlankItemCount: 100,
+        minTrailingVisibleItemCount: 3,
+      );
+
+      expect(beginIndex, maxBeginIndex);
+    });
+
+    test('does not overscroll when data is shorter than trailing blank config',
+        () {
+      final beginIndex = KLineController.beginIndexForScrollOffset(
+        offset: 240,
+        itemExtent: 12,
+        itemCount: 30,
+        dataLength: 5,
+        trailingBlankItemCount: 20,
+        minTrailingVisibleItemCount: 4,
+      );
+
+      expect(beginIndex, 0);
+    });
+
+    test('keeps all available real candles visible when data is below minimum',
+        () {
+      final beginIndex = KLineController.beginIndexForScrollOffset(
+        offset: 240,
+        itemExtent: 12,
+        itemCount: 7,
+        dataLength: 3,
+        trailingBlankItemCount: 20,
+        minTrailingVisibleItemCount: 4,
       );
 
       expect(beginIndex, 0);
@@ -141,6 +210,25 @@ void main() {
 
       expect(result.itemCount, 15);
       expect(result.beginIndex, 85);
+    });
+
+    test('allows zoom results inside the configured trailing blank range', () {
+      final result = KLineController.zoomForScale(
+        startBeginIndex: 90,
+        startItemCount: 30,
+        scale: 1,
+        startFocalDx: 300,
+        currentFocalDx: 300,
+        viewportWidth: 300,
+        dataLength: 100,
+        minItemCount: 7,
+        maxItemCount: 39,
+        trailingBlankItemCount: 20,
+        minTrailingVisibleItemCount: 3,
+      );
+
+      expect(result.itemCount, 30);
+      expect(result.beginIndex, 90);
     });
   });
 
@@ -296,6 +384,69 @@ void main() {
       ));
       await tester.pump();
 
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets(
+        'initializes at the latest candle when trailing blank is disabled',
+        (tester) async {
+      KLineController.shared.data = _buildKLineData(40);
+      KLineController.shared.itemCount = 10;
+
+      await tester.pumpWidget(MaterialApp(
+        home: Center(
+          child: SizedBox(width: 300, height: 240, child: KLineView()),
+        ),
+      ));
+      await tester.pump();
+
+      final scrollView = tester
+          .widget<SingleChildScrollView>(find.byType(SingleChildScrollView));
+
+      expect(scrollView.controller?.offset, closeTo(900, 0.000001));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('initializes with configured trailing blank space',
+        (tester) async {
+      KLineController.shared.data = _buildKLineData(40);
+      KLineController.shared.itemCount = 10;
+      KLineController.shared.trailingBlankItemCount = 4;
+      KLineController.shared.maxTrailingBlankItemCount = 8;
+
+      await tester.pumpWidget(MaterialApp(
+        home: Center(
+          child: SizedBox(width: 300, height: 240, child: KLineView()),
+        ),
+      ));
+      await tester.pump();
+
+      final scrollView = tester
+          .widget<SingleChildScrollView>(find.byType(SingleChildScrollView));
+
+      expect(scrollView.controller?.offset, closeTo(1020, 0.000001));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('renders short data with trailing blank defaults',
+        (tester) async {
+      KLineController.shared.data = _buildKLineData(3);
+      KLineController.shared.itemCount = 7;
+      KLineController.shared.trailingBlankItemCount = 5;
+      KLineController.shared.maxTrailingBlankItemCount = 20;
+      KLineController.shared.minTrailingVisibleItemCount = 4;
+
+      await tester.pumpWidget(MaterialApp(
+        home: Center(
+          child: SizedBox(width: 280, height: 240, child: KLineView()),
+        ),
+      ));
+      await tester.pump();
+
+      final scrollView = tester
+          .widget<SingleChildScrollView>(find.byType(SingleChildScrollView));
+
+      expect(scrollView.controller?.offset, 0);
       expect(tester.takeException(), isNull);
     });
   });

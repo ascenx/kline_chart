@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import './kline_controller.dart';
 import 'indicators/indicator_data_cache.dart';
@@ -53,6 +55,12 @@ class _KLineViewState extends State<KLineView> {
       itemExtent: itemW + spacing,
       itemCount: KLineController.shared.itemCount,
       dataLength: KLineController.shared.data.length,
+      trailingBlankItemCount: max(
+        KLineController.shared.trailingBlankItemCount,
+        KLineController.shared.maxTrailingBlankItemCount,
+      ),
+      minTrailingVisibleItemCount:
+          KLineController.shared.minTrailingVisibleItemCount,
     );
     if ((_beginIdx - beginIdx).abs() < _scrollIndexTolerance) return;
     _beginIdx = beginIdx;
@@ -72,6 +80,12 @@ class _KLineViewState extends State<KLineView> {
       dataLength: KLineController.shared.data.length,
       minItemCount: KLineController.shared.minCount,
       maxItemCount: KLineController.shared.maxCount,
+      trailingBlankItemCount: max(
+        KLineController.shared.trailingBlankItemCount,
+        KLineController.shared.maxTrailingBlankItemCount,
+      ),
+      minTrailingVisibleItemCount:
+          KLineController.shared.minTrailingVisibleItemCount,
     );
 
     if ((_beginIdx - result.beginIndex).abs() < _scrollIndexTolerance &&
@@ -137,18 +151,33 @@ class _KLineViewState extends State<KLineView> {
           double itemCount = KLineController.shared.itemCount;
           double itemW = KLineController.getItemWidth(containerW);
           double spacing = KLineController.shared.spacing;
+          double itemExtent = itemW + spacing;
+          final scrollTrailingBlankItemCount =
+              KLineController.effectiveTrailingBlankItemCountFor(
+            itemCount: itemCount,
+            trailingBlankItemCount: max(
+              KLineController.shared.trailingBlankItemCount,
+              KLineController.shared.maxTrailingBlankItemCount,
+            ),
+            minTrailingVisibleItemCount:
+                KLineController.shared.minTrailingVisibleItemCount,
+          );
           // scroll size
-          double contentSizeW = dataLength * (itemW + spacing);
+          double contentSizeW =
+              (dataLength + scrollTrailingBlankItemCount) * itemExtent;
           if (_beginIdx < 0) {
             // init
             // show begin index
-            _beginIdx = (dataLength - itemCount).toDouble();
-            if (_beginIdx < 0) {
-              _beginIdx = 0;
-            }
+            _beginIdx = KLineController.maxBeginIndexFor(
+              dataLength: dataLength,
+              itemCount: itemCount,
+              trailingBlankItemCount:
+                  KLineController.shared.trailingBlankItemCount,
+              minTrailingVisibleItemCount:
+                  KLineController.shared.minTrailingVisibleItemCount,
+            );
             // double beginOffset = _beginIdx / dataLength * contentSizeW;
-            double beginOffset =
-                dataLength < itemCount ? 0.0 : contentSizeW - containerW;
+            double beginOffset = _beginIdx * itemExtent;
             _initScrollController(beginOffset);
           }
           final indicatorDataCache =
