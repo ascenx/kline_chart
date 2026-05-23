@@ -1,6 +1,6 @@
 # KLine Chart
 
-[English](README.md) | [简体中文](README.zh-CN.md)
+[English](README.md) | [简体中文](README.zh-CN.md) | [Usage Wiki](docs/wiki.md) | [中文 Wiki](docs/wiki.zh-CN.md) | [Style API](docs/style-api.md)
 
 [![pub package](https://img.shields.io/pub/v/kline_chart?style=flat)](https://pub.dev/packages/kline_chart)
 [![license](https://img.shields.io/github/license/AscenX/kline_chart?style=flat)](https://github.com/AscenX/kline_chart)
