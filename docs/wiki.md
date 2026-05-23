@@ -30,7 +30,7 @@ Add the package to your Flutter project's `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  kline_chart: ^0.0.1+4
+  kline_chart: ^1.0.0
 ```
 
 Import the main package:
@@ -921,4 +921,3 @@ controller.volumeFormatter = (value) {
 cd example
 flutter run
 ```
-

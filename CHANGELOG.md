@@ -1,3 +1,19 @@
+## 1.0.0
+
+- Promote the package to the first stable `1.0.0` release.
+- Add comprehensive usage wiki documentation in English and Simplified Chinese.
+- Add Simplified Chinese README documentation.
+- Add customizable number formatting for prices, volumes, and indicator values.
+- Add compact default volume formatting with `K`, `M`, and `B` suffixes.
+- Add configurable trailing blank space after the latest candle, including maximum trailing blank range and minimum visible real candle count.
+- Add grouped chart style APIs for chart canvas, candles, volume bars, crosshair, and info overlay customization.
+- Add SAR color customization and extended indicator style options.
+- Improve line indicator alignment so latest indicator points align with the latest candle.
+- Improve fractional scroll rendering for line indicators, VOL, and MACD so candles and indicators leave the viewport smoothly.
+- Fix MACD leading histogram rendering so the first visible bar keeps the correct hollow or filled style.
+- Improve chart drawing performance by reusing indicator info painters, batching paths, reducing repaint overhead, and adding benchmark coverage.
+- Add API and style documentation for advanced controller-based customization.
+
 ## 0.0.1+4
 
 - Add grouped chart, candle, volume, crosshair, and info style customization.

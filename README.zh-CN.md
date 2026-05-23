@@ -31,7 +31,7 @@ KLine Chart 是一个轻量级 Flutter K 线图组件，用于构建交易、行
 
 ```yaml
 dependencies:
-  kline_chart: ^0.0.1+4
+  kline_chart: ^1.0.0
 ```
 
 然后导入：
