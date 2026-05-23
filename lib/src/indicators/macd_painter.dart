@@ -5,7 +5,7 @@ import '../kline_controller.dart';
 class MACDPainter {
   final List<List<double>> dataList;
 
-  MACDPainter(this.dataList);
+  MACDPainter([this.dataList = const []]);
 
   final Paint _positivePaint = Paint()
     ..style = PaintingStyle.fill
@@ -33,10 +33,46 @@ class MACDPainter {
     ..style = PaintingStyle.stroke
     ..strokeWidth = 0.5
     ..color = Colors.blueGrey.withValues(alpha: 0.3);
+  final Paint _linePaint = Paint()
+    ..style = PaintingStyle.stroke
+    ..isAntiAlias = true
+    ..strokeCap = StrokeCap.round
+    ..strokeJoin = StrokeJoin.round
+    ..strokeWidth = 1;
 
   void paint(
     Canvas canvas,
     Size size,
+    double drawAreaHeight,
+    List<int> periods,
+    double slideOffset,
+    double maxValue,
+    double minValue, {
+    double top = 0.0,
+    List<Color> lineColors = const [],
+    int? selectedIndex,
+    bool showInfo = true,
+  }) {
+    paintData(
+      canvas,
+      size,
+      dataList,
+      drawAreaHeight,
+      periods,
+      slideOffset,
+      maxValue,
+      minValue,
+      top: top,
+      lineColors: lineColors,
+      selectedIndex: selectedIndex,
+      showInfo: showInfo,
+    );
+  }
+
+  void paintData(
+    Canvas canvas,
+    Size size,
+    List<List<double>> dataList,
     double drawAreaHeight,
     List<int> periods,
     double slideOffset,
@@ -74,13 +110,13 @@ class MACDPainter {
     canvas.drawLine(
         Offset(0, zeroY), Offset(size.width, zeroY), _zeroLinePaint);
     _drawHistogram(canvas, drawAreaHeight, contentTop, itemW, itemExtent,
-        slideOffset, valueOffset, maxValue, minValue);
+        slideOffset, valueOffset, maxValue, minValue, dataList[2]);
     _drawLine(canvas, drawAreaHeight, contentTop, itemW, itemExtent,
         slideOffset, valueOffset, maxValue, minValue, dataList[0], macdColor);
     _drawLine(canvas, drawAreaHeight, contentTop, itemW, itemExtent,
         slideOffset, valueOffset, maxValue, minValue, dataList[1], signalColor);
     if (showInfo) {
-      paintInfo(canvas, size, periods, top,
+      paintInfoForData(canvas, size, dataList, periods, top,
           lineColors: lineColors, selectedIndex: selectedIndex);
     }
   }
@@ -95,6 +131,7 @@ class MACDPainter {
     double valueOffset,
     double maxValue,
     double minValue,
+    List<double> histogram,
   ) {
     double zeroY = _valueToY(
       0.0,
@@ -105,7 +142,7 @@ class MACDPainter {
       minValue,
     );
     double barWidth = itemW * 0.7;
-    List<double> histogram = dataList[2];
+    double previousValue = 0.0;
 
     for (int i = 0; i < histogram.length; ++i) {
       double value = histogram[i];
@@ -124,12 +161,12 @@ class MACDPainter {
       if (height == 0.0) {
         height = 1.0;
       }
-      double previousValue = _previousValidValue(histogram, i);
       bool isSolid = isSolidHistogramBar(value, previousValue);
       canvas.drawRect(
         Rect.fromLTWH(centerX - barWidth * 0.5, topY, barWidth, height),
         _histogramPaint(value, isSolid),
       );
+      previousValue = value;
     }
   }
 
@@ -146,13 +183,7 @@ class MACDPainter {
     List<double> values,
     Color color,
   ) {
-    Paint linePaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..color = color
-      ..isAntiAlias = true
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round
-      ..strokeWidth = 1;
+    _linePaint.color = color;
 
     double? lastX;
     double? lastY;
@@ -172,7 +203,7 @@ class MACDPainter {
         minValue,
       );
       if (lastX != null && lastY != null) {
-        canvas.drawLine(Offset(lastX, lastY), Offset(x, y), linePaint);
+        canvas.drawLine(Offset(lastX, lastY), Offset(x, y), _linePaint);
       }
       lastX = x;
       lastY = y;
@@ -196,6 +227,26 @@ class MACDPainter {
   void paintInfo(
     Canvas canvas,
     Size size,
+    List<int> periods,
+    double top, {
+    List<Color> lineColors = const [],
+    int? selectedIndex,
+  }) {
+    paintInfoForData(
+      canvas,
+      size,
+      dataList,
+      periods,
+      top,
+      lineColors: lineColors,
+      selectedIndex: selectedIndex,
+    );
+  }
+
+  static void paintInfoForData(
+    Canvas canvas,
+    Size size,
+    List<List<double>> dataList,
     List<int> periods,
     double top, {
     List<Color> lineColors = const [],
@@ -243,7 +294,7 @@ class MACDPainter {
     }
   }
 
-  Color _lineColor(List<Color> lineColors, int index, Color fallback) {
+  static Color _lineColor(List<Color> lineColors, int index, Color fallback) {
     if (index < lineColors.length) {
       return lineColors[index];
     }
@@ -255,15 +306,6 @@ class MACDPainter {
       return isSolid ? _positivePaint : _positiveStrokePaint;
     }
     return isSolid ? _negativePaint : _negativeStrokePaint;
-  }
-
-  double _previousValidValue(List<double> values, int index) {
-    for (int i = index - 1; i >= 0; --i) {
-      if (!_isInvalidValue(values[i])) {
-        return values[i];
-      }
-    }
-    return 0.0;
   }
 
   bool _isInvalidValue(double value) => value == -1.0;

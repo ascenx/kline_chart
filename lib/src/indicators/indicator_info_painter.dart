@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-import 'indicator_data_handler.dart';
+import 'indicator_data_cache.dart';
 import 'indicator_line_painter.dart';
 import 'indicator_result.dart';
 import 'macd_painter.dart';
@@ -13,10 +13,13 @@ class KLineIndicatorInfoPainter extends CustomPainter {
   final List<KLineData> klineData;
   final double beginIdx;
   final _IndicatorInfoConfig _config;
-  final Map<IndicatorType, IndicatorResult> _resultCache = {};
+  final KLineIndicatorDataCache _indicatorDataCache;
 
-  KLineIndicatorInfoPainter(this.klineData, this.beginIdx)
+  KLineIndicatorInfoPainter(this.klineData, this.beginIdx,
+      {KLineIndicatorDataCache? indicatorDataCache})
       : _config = _IndicatorInfoConfig.fromController(KLineController.shared),
+        _indicatorDataCache =
+            indicatorDataCache ?? KLineIndicatorDataCache(klineData, beginIdx),
         super(repaint: KLineController.shared.longPressOffset);
 
   @override
@@ -45,9 +48,9 @@ class KLineIndicatorInfoPainter extends CustomPainter {
     final isShowMA = showMainIndicators.contains(IndicatorType.ma);
     final isShowEMA = showMainIndicators.contains(IndicatorType.ema);
     if (isShowMA || isShowEMA) {
-      final periods = isShowMA ? [7, 30] : [7, 25];
-      final result =
-          _indicatorResult(isShowMA ? IndicatorType.ma : IndicatorType.ema);
+      final type = isShowMA ? IndicatorType.ma : IndicatorType.ema;
+      final periods = _indicatorDataCache.periodsFor(type);
+      final result = _indicatorResult(type);
       IndicatorLinePainter.paintInfo(
         canvas,
         size,
@@ -61,14 +64,14 @@ class KLineIndicatorInfoPainter extends CustomPainter {
 
     final isShowBOLL = showMainIndicators.contains(IndicatorType.boll);
     if (isShowBOLL) {
-      final period = _config.bollPeriod;
+      final periods = _indicatorDataCache.periodsFor(IndicatorType.boll);
       final result = _indicatorResult(IndicatorType.boll);
       IndicatorLinePainter.paintInfo(
         canvas,
         size,
         showMainIndicators.first,
         result.data,
-        [period, period, period],
+        periods,
         _config.klineTop,
         selectedIndex: selectedIndex,
       );
@@ -104,7 +107,7 @@ class KLineIndicatorInfoPainter extends CustomPainter {
           indicatorSpacing;
 
       if (type == IndicatorType.vol) {
-        final periods = _config.volMaPeriods;
+        final periods = _indicatorDataCache.periodsFor(IndicatorType.maVol);
         final result = _indicatorResult(IndicatorType.maVol);
         IndicatorLinePainter.paintInfo(
           canvas,
@@ -117,10 +120,11 @@ class KLineIndicatorInfoPainter extends CustomPainter {
         );
       } else if (type == IndicatorType.macd) {
         final result = _indicatorResult(IndicatorType.macd);
-        MACDPainter(result.data).paintInfo(
+        MACDPainter.paintInfoForData(
           canvas,
           size,
-          _config.currentPeriods(type),
+          result.data,
+          _indicatorDataCache.periodsFor(type),
           subTop,
           lineColors: _config.indicatorColors,
           selectedIndex: selectedIndex,
@@ -132,7 +136,7 @@ class KLineIndicatorInfoPainter extends CustomPainter {
           size,
           type,
           result,
-          _config.currentPeriods(type),
+          _indicatorDataCache.periodsFor(type),
           subTop,
           lineColors: _config.indicatorColors,
           selectedIndex: selectedIndex,
@@ -142,43 +146,7 @@ class KLineIndicatorInfoPainter extends CustomPainter {
   }
 
   IndicatorResult _indicatorResult(IndicatorType type) {
-    final cached = _resultCache[type];
-    if (cached != null) {
-      return cached;
-    }
-
-    final result = _calculateIndicatorResult(type);
-    _resultCache[type] = result;
-    return result;
-  }
-
-  IndicatorResult _calculateIndicatorResult(IndicatorType type) {
-    if (type == IndicatorType.ma) {
-      return IndicatorDataHandler.ma(klineData, [7, 30], beginIdx);
-    } else if (type == IndicatorType.ema) {
-      return IndicatorDataHandler.ema(klineData, [7, 25], beginIdx);
-    } else if (type == IndicatorType.boll) {
-      return IndicatorDataHandler.boll(
-          klineData, _config.bollPeriod, _config.bollBandwidth, beginIdx);
-    } else if (type == IndicatorType.maVol) {
-      return IndicatorDataHandler.ma(klineData, _config.volMaPeriods, beginIdx,
-          isVol: true);
-    } else if (type == IndicatorType.macd) {
-      return IndicatorDataHandler.macd(
-          klineData, _config.macdPeriods, beginIdx);
-    } else if (type == IndicatorType.sar) {
-      return IndicatorDataHandler.sar(klineData, beginIdx);
-    }
-    if (type == IndicatorType.kdj) {
-      return IndicatorDataHandler.kdj(klineData, _config.kdjPeriods, beginIdx);
-    } else if (type == IndicatorType.rsi) {
-      return IndicatorDataHandler.rsi(klineData, _config.rsiPeriods, beginIdx);
-    } else if (type == IndicatorType.wr) {
-      return IndicatorDataHandler.wr(klineData, _config.wrPeriods, beginIdx);
-    } else if (type == IndicatorType.obv) {
-      return IndicatorDataHandler.obv(klineData, beginIdx);
-    }
-    return IndicatorResult.empty;
+    return _indicatorDataCache.result(type);
   }
 
   @override
@@ -254,21 +222,6 @@ class _IndicatorInfoConfig {
       itemCount: controller.itemCount,
       spacing: controller.spacing,
     );
-  }
-
-  List<int> currentPeriods(IndicatorType type) {
-    if (type == IndicatorType.kdj) {
-      return kdjPeriods;
-    } else if (type == IndicatorType.macd) {
-      return macdPeriods;
-    } else if (type == IndicatorType.rsi) {
-      return rsiPeriods;
-    } else if (type == IndicatorType.wr) {
-      return wrPeriods;
-    } else if (type == IndicatorType.obv) {
-      return [0];
-    }
-    return const [];
   }
 
   @override

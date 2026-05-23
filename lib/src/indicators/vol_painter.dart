@@ -1,18 +1,22 @@
 import 'package:flutter/material.dart';
-import '../indicators/indicator_line_painter.dart';
+import 'indicator_data_cache.dart';
+import 'indicator_line_painter.dart';
 import '../indicators/indicator_result.dart';
 import '../kline_chart_style.dart';
 import '../kline_controller.dart';
 import '../kline_data.dart';
-import '../indicators/indicator_data_handler.dart';
 
 class VolPainter {
   final List<KLineData> klineData;
   final double beginIdx;
   final KLineVolumeStyle _style;
+  final KLineIndicatorDataCache _indicatorDataCache;
 
-  VolPainter(this.klineData, this.beginIdx)
-      : _style = KLineController.shared.volumeStyle;
+  VolPainter(this.klineData, this.beginIdx,
+      {KLineIndicatorDataCache? indicatorDataCache})
+      : _style = KLineController.shared.volumeStyle,
+        _indicatorDataCache =
+            indicatorDataCache ?? KLineIndicatorDataCache(klineData, beginIdx);
 
   final riseRectPaint = Paint()
     ..style = PaintingStyle.fill
@@ -39,9 +43,8 @@ class VolPainter {
 
     double min = 0.0;
     // calculated MA volume
-    List<int> maPeriods = KLineController.shared.volMaPeriods;
-    IndicatorResult maRes =
-        IndicatorDataHandler.ma(klineData, maPeriods, beginIdx, isVol: true);
+    List<int> maPeriods = _indicatorDataCache.periodsFor(IndicatorType.maVol);
+    IndicatorResult maRes = _indicatorDataCache.result(IndicatorType.maVol);
     List<List<double>> maList = [];
     double maMax = maRes.maxValue;
     maList = maRes.data;

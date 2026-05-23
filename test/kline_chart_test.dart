@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kline_chart/kline_chart.dart';
+import 'package:kline_chart/src/indicators/indicator_data_cache.dart';
 import 'package:kline_chart/src/indicators/indicator_data_handler.dart';
 import 'package:kline_chart/src/indicators/indicator_line_painter.dart';
 import 'package:kline_chart/src/indicators/macd_painter.dart';
@@ -316,6 +317,76 @@ void main() {
         returnsNormally,
       );
     });
+
+    test('calculates visible MA values without changing window alignment', () {
+      KLineController.shared.itemCount = 5;
+      final data = _buildKLineDataFromCloses([1, 2, 3, 4, 5, 6, 7, 8]);
+
+      final result = IndicatorDataHandler.ma(data, [3], 3);
+
+      expect(result.data.single, [2, 3, 4, 5, 6, 7]);
+      expect(result.maxValue, 7);
+      expect(result.minValue, 2);
+    });
+
+    test('calculates BOLL values and bounds with existing sentinel behavior',
+        () {
+      KLineController.shared.itemCount = 5;
+      final data = _buildKLineDataFromCloses([1, 2, 3, 4, 5]);
+
+      final result = IndicatorDataHandler.boll(data, 3, 2, 0);
+      final mb = result.data[0];
+      final up = result.data[1];
+      final dn = result.data[2];
+
+      expect(mb, [-1, -1, 2, 3, 4]);
+      expect(up[0], -1);
+      expect(up[1], -1);
+      expect(up[2], closeTo(3.632993161855452, 0.000001));
+      expect(up[3], closeTo(4.6329931618554525, 0.000001));
+      expect(up[4], closeTo(5.6329931618554525, 0.000001));
+      expect(dn[0], -1);
+      expect(dn[1], -1);
+      expect(dn[2], closeTo(0.367006838144548, 0.000001));
+      expect(dn[3], closeTo(1.367006838144548, 0.000001));
+      expect(dn[4], closeTo(2.367006838144548, 0.000001));
+      expect(result.maxValue, closeTo(5.6329931618554525, 0.000001));
+      expect(result.minValue, -1);
+    });
+
+    test('calculates KDJ values without changing the visible result', () {
+      KLineController.shared.itemCount = 5;
+      final data = _buildKLineDataFromCloses([10, 12, 11, 14, 13, 15]);
+
+      final result = IndicatorDataHandler.kdj(data, [3, 3, 3], 0);
+      final k = result.data[0];
+      final d = result.data[1];
+      final j = result.data[2];
+
+      expect(k[0], closeTo(83.33333333333333, 0.000001));
+      expect(d[0], closeTo(61.11111111111111, 0.000001));
+      expect(j[0], closeTo(127.77777777777777, 0.000001));
+      expect(k.last, closeTo(69.87654320987653, 0.000001));
+      expect(d.last, closeTo(68.72427983539094, 0.000001));
+      expect(j.last, closeTo(72.18106995884772, 0.000001));
+      expect(result.maxValue, closeTo(127.77777777777777, 0.000001));
+      expect(result.minValue, closeTo(61.11111111111111, 0.000001));
+    });
+
+    test('calculates WR values without changing the visible result', () {
+      KLineController.shared.itemCount = 5;
+      final data = _buildKLineDataFromCloses([10, 12, 11, 14, 13]);
+
+      final result = IndicatorDataHandler.wr(data, [3], 0);
+
+      expect(result.data.single[0], closeTo(50, 0.000001));
+      expect(result.data.single[1], closeTo(25, 0.000001));
+      expect(result.data.single[2], closeTo(50, 0.000001));
+      expect(result.data.single[3], closeTo(16.666666666666664, 0.000001));
+      expect(result.data.single[4], closeTo(40, 0.000001));
+      expect(result.maxValue, closeTo(50, 0.000001));
+      expect(result.minValue, closeTo(16.666666666666664, 0.000001));
+    });
   });
 
   group('IndicatorDataHandler.rsi', () {
@@ -357,6 +428,37 @@ void main() {
       expect(result.data.single, [-1, -1, -1]);
       expect(result.maxValue, 100);
       expect(result.minValue, 0);
+    });
+  });
+
+  group('KLineIndicatorDataCache', () {
+    test('reuses the same result for repeated indicator requests', () {
+      KLineController.shared.itemCount = 5;
+      final data = _buildKLineDataFromCloses([1, 2, 3, 4, 5, 6, 7, 8]);
+      final cache = KLineIndicatorDataCache(data, 0);
+
+      final first = cache.result(IndicatorType.ma);
+      final second = cache.result(IndicatorType.ma);
+      final expected = IndicatorDataHandler.ma(data, const [7, 30], 0);
+
+      expect(second, same(first));
+      expect(first.data, expected.data);
+      expect(first.maxValue, expected.maxValue);
+      expect(first.minValue, expected.minValue);
+    });
+
+    test('uses configured volume MA periods', () {
+      KLineController.shared.itemCount = 5;
+      KLineController.shared.volMaPeriods = [2];
+      final data = _buildKLineDataFromCloses([1, 2, 3, 4, 5]);
+      final cache = KLineIndicatorDataCache(data, 0);
+
+      final result = cache.result(IndicatorType.maVol);
+      final expected = IndicatorDataHandler.ma(data, [2], 0, isVol: true);
+
+      expect(result.data, expected.data);
+      expect(result.maxValue, expected.maxValue);
+      expect(result.minValue, expected.minValue);
     });
   });
 

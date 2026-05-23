@@ -29,25 +29,25 @@ class IndicatorDataHandler {
       int period = periods[i];
 
       for (var j = beginIdx - 1; j < beginIdx + itemCount + 1; ++j) {
-        if (j.ceil() < period - 1) {
+        final dataIndex = j.ceil();
+        if (dataIndex < period - 1) {
           maList.add(-1);
           continue;
         }
-        if (j.ceil() >= klineData.length) break;
+        if (dataIndex >= klineData.length) break;
 
         // start from the index equals period
         double startIdx = j >= period - 1 ? j - period + 1 : 0;
 
-        List<KLineData> sublist =
-            klineData.sublist(startIdx.ceil(), (startIdx + period).ceil());
-        if (sublist.isEmpty) continue;
+        final start = startIdx.ceil();
+        final end = (startIdx + period).ceil();
+        if (start == end) continue;
+
         double sum = 0.0;
-        if (isVol) {
-          sum = sublist.fold(0.0, (pre, e) => pre + e.volume);
-        } else {
-          sum = sublist.fold(0.0, (pre, e) => pre + e.close);
+        for (int k = start; k < end; ++k) {
+          sum += isVol ? klineData[k].volume : klineData[k].close;
         }
-        double maValue = sum / sublist.length;
+        double maValue = sum / (end - start);
 
         if (max == 0 || maValue > max) {
           max = maValue;
@@ -73,6 +73,8 @@ class IndicatorDataHandler {
     double max = 0.0;
     double min = 0.0;
     double itemCount = KLineController.shared.itemCount;
+    int visibleStart = _visibleStart(beginIdx);
+    int visibleEnd = _visibleEnd(klineData, beginIdx);
 
     for (var i = 0; i < periods.length; ++i) {
       List<double> emaList = [];
@@ -81,17 +83,21 @@ class IndicatorDataHandler {
       double lastEma = klineData.first.close;
       double sum = 0.0;
 
-      for (int j = 0; j < klineData.length; ++j) {
+      for (int j = 0; j < visibleEnd; ++j) {
         double close = klineData[j].close;
 
         if (j < period - 1) {
-          emaList.add(-1);
+          if (j >= visibleStart && j < visibleEnd) {
+            emaList.add(-1);
+          }
           sum += close;
           continue;
         } else if (j == period - 1) {
           sum += close;
           lastEma = sum / period;
-          emaList.add(lastEma);
+          if (j >= visibleStart && j < visibleEnd) {
+            emaList.add(lastEma);
+          }
           continue;
         }
 
@@ -109,23 +115,14 @@ class IndicatorDataHandler {
         }
 
         lastEma = emaValue;
-        emaList.add(emaValue);
+        if (j >= visibleStart && j < visibleEnd) {
+          emaList.add(emaValue);
+        }
       }
 
-      int start = _visibleStart(beginIdx);
-      int end = _visibleEnd(klineData, beginIdx);
-      List<double> subList = start < end ? emaList.sublist(start, end) : [];
-      emaData.add(subList);
+      emaData.add(emaList);
     }
     return IndicatorResult(emaData, max, min);
-  }
-
-  static double _calculateStandardDeviation(List<double> values) {
-    double mean = values.reduce((a, b) => a + b) / values.length;
-    double variance =
-        values.map((x) => pow(x - mean, 2)).reduce((a, b) => a + b) /
-            values.length;
-    return sqrt(variance);
   }
 
   static IndicatorResult boll(
@@ -133,22 +130,37 @@ class IndicatorDataHandler {
     if (klineData.isEmpty || period < 0 || bandwidth < 0) {
       return IndicatorResult.empty;
     }
+    if (period == 0) {
+      throw StateError('No element');
+    }
 
     List<double> upList = [];
     List<double> mbList = [];
     List<double> dnList = [];
 
-    for (int i = 0; i < klineData.length; i++) {
+    final visibleStart = _visibleStart(beginIdx);
+    final visibleEnd = _visibleEnd(klineData, beginIdx);
+
+    for (int i = visibleStart; i < visibleEnd; i++) {
       if (i < period - 1) {
         upList.add(-1);
         mbList.add(-1);
         dnList.add(-1);
         continue;
       }
-      List<double> subList =
-          klineData.sublist(i - period + 1, i + 1).map((e) => e.close).toList();
-      double mb = subList.reduce((a, b) => a + b) / period;
-      double std = _calculateStandardDeviation(subList);
+      final start = i - period + 1;
+      double sum = 0.0;
+      for (int j = start; j <= i; ++j) {
+        sum += klineData[j].close;
+      }
+      double mb = sum / period;
+
+      double variance = 0.0;
+      for (int j = start; j <= i; ++j) {
+        final diff = klineData[j].close - mb;
+        variance += diff * diff;
+      }
+      double std = sqrt(variance / period);
 
       double up = mb + bandwidth * std;
       double dn = mb - bandwidth * std;
@@ -158,11 +170,6 @@ class IndicatorDataHandler {
       dnList.add(dn);
     }
 
-    int start = _visibleStart(beginIdx);
-    int end = _visibleEnd(klineData, beginIdx);
-    upList = start < end ? upList.sublist(start, end) : [];
-    mbList = start < end ? mbList.sublist(start, end) : [];
-    dnList = start < end ? dnList.sublist(start, end) : [];
     if (dnList.isEmpty) {
       return IndicatorResult.empty;
     }
@@ -189,7 +196,9 @@ class IndicatorDataHandler {
       return IndicatorResult.empty;
     }
 
-    final values = List<double>.filled(klineData.length, -1.0);
+    final visibleStart = _visibleStart(beginIdx);
+    final visibleEnd = _visibleEnd(klineData, beginIdx);
+    final visibleValues = <double>[];
     bool isRising = klineData[1].close >= klineData[0].close;
     double sar = isRising
         ? min(klineData[0].low, klineData[1].low)
@@ -198,9 +207,14 @@ class IndicatorDataHandler {
         ? max(klineData[0].high, klineData[1].high)
         : min(klineData[0].low, klineData[1].low);
     double accelerationFactor = startAf;
-    values[1] = sar;
+    if (visibleStart == 0 && visibleStart < visibleEnd) {
+      visibleValues.add(-1.0);
+    }
+    if (visibleStart <= 1 && 1 < visibleEnd) {
+      visibleValues.add(sar);
+    }
 
-    for (int i = 2; i < klineData.length; ++i) {
+    for (int i = 2; i < visibleEnd; ++i) {
       sar = sar + accelerationFactor * (extremePoint - sar);
 
       if (isRising) {
@@ -227,12 +241,11 @@ class IndicatorDataHandler {
         }
       }
 
-      values[i] = sar;
+      if (i >= visibleStart && i < visibleEnd) {
+        visibleValues.add(sar);
+      }
     }
 
-    final start = _visibleStart(beginIdx);
-    final end = _visibleEnd(klineData, beginIdx);
-    final visibleValues = start < end ? values.sublist(start, end) : <double>[];
     if (visibleValues.isEmpty) {
       return IndicatorResult.empty;
     }
@@ -276,15 +289,17 @@ class IndicatorDataHandler {
     double slowAlpha = 2.0 / (slowPeriod + 1);
     double signalAlpha = 2.0 / (signalPeriod + 1);
 
-    List<double> macdLine = [];
-    List<double> signalLine = [];
-    List<double> histogram = [];
+    List<double> visibleMacd = [];
+    List<double> visibleSignal = [];
+    List<double> visibleHistogram = [];
+    int visibleStart = _visibleStart(beginIdx);
+    int visibleEnd = _visibleEnd(klineData, beginIdx);
 
     double? fastEma;
     double? slowEma;
     double? signalEma;
 
-    for (int i = 0; i < klineData.length; ++i) {
+    for (int i = 0; i < visibleEnd; ++i) {
       double close = klineData[i].close;
       if (i < fastPeriod - 1) {
         fastEma = null;
@@ -295,9 +310,11 @@ class IndicatorDataHandler {
       }
 
       if (i < slowPeriod - 1) {
-        macdLine.add(-1);
-        signalLine.add(-1);
-        histogram.add(-1);
+        if (i >= visibleStart && i < visibleEnd) {
+          visibleMacd.add(-1);
+          visibleSignal.add(-1);
+          visibleHistogram.add(-1);
+        }
         continue;
       } else if (i == slowPeriod - 1) {
         slowEma = _closeAverage(klineData, i - slowPeriod + 1, i + 1);
@@ -311,18 +328,12 @@ class IndicatorDataHandler {
           : macd * signalAlpha + signalEma * (1 - signalAlpha);
       double hist = macd - signalEma;
 
-      macdLine.add(macd);
-      signalLine.add(signalEma);
-      histogram.add(hist);
+      if (i >= visibleStart && i < visibleEnd) {
+        visibleMacd.add(macd);
+        visibleSignal.add(signalEma);
+        visibleHistogram.add(hist);
+      }
     }
-
-    int start = _visibleStart(beginIdx);
-    int end = _visibleEnd(klineData, beginIdx);
-    List<double> visibleMacd = start < end ? macdLine.sublist(start, end) : [];
-    List<double> visibleSignal =
-        start < end ? signalLine.sublist(start, end) : [];
-    List<double> visibleHistogram =
-        start < end ? histogram.sublist(start, end) : [];
 
     double maxValue = 0.0;
     double minValue = 0.0;
@@ -372,7 +383,8 @@ class IndicatorDataHandler {
     double itemCount = KLineController.shared.itemCount;
 
     double lastK = 0.0, lastD = 0.0;
-    for (int i = 0; i < klineData.length; i++) {
+    final visibleEnd = _visibleEnd(klineData, beginIdx);
+    for (int i = 0; i < visibleEnd; i++) {
       KLineData data = klineData[i];
       if (i == 0) {
         double rsv = (data.close - data.low) / (data.high - data.low) * 100;
@@ -383,12 +395,14 @@ class IndicatorDataHandler {
       int startIdx = i >= period1 ? i - period1 + 1 : 0;
       int length = i >= period1 ? period1 : i;
 
-      List<KLineData> sublist = klineData.sublist(startIdx, startIdx + length);
-
-      double hn = sublist.first.high;
-      double ln = sublist.first.low;
-      for (int j = 1; j < sublist.length; j++) {
-        KLineData subData = sublist[j];
+      int endIdx = startIdx + length;
+      if (startIdx == endIdx) {
+        throw StateError('No element');
+      }
+      double hn = klineData[startIdx].high;
+      double ln = klineData[startIdx].low;
+      for (int j = startIdx + 1; j < endIdx; j++) {
+        KLineData subData = klineData[j];
         hn = hn > subData.high ? hn : subData.high;
         ln = ln < subData.low ? ln : subData.low;
       }
@@ -444,6 +458,8 @@ class IndicatorDataHandler {
     double min = 0.0;
     bool hasVisibleValue = false;
     bool hasValidPeriod = false;
+    int visibleStart = _visibleStart(beginIdx);
+    int visibleEnd = _visibleEnd(klineData, beginIdx);
 
     for (var idx = 0; idx < periods.length; ++idx) {
       int period = periods[idx];
@@ -453,11 +469,11 @@ class IndicatorDataHandler {
       }
       hasValidPeriod = true;
 
-      List<double> rsiList = [];
+      List<double> subList = [];
       double avgGain = 0.0;
       double avgLoss = 0.0;
 
-      for (int i = 0; i < klineData.length; ++i) {
+      for (int i = 0; i < visibleEnd; ++i) {
         if (i < period) {
           if (i > 0) {
             double diff = klineData[i].close - klineData[i - 1].close;
@@ -467,7 +483,9 @@ class IndicatorDataHandler {
               avgLoss -= diff;
             }
           }
-          rsiList.add(-1);
+          if (i >= visibleStart && i < visibleEnd) {
+            subList.add(-1);
+          }
           continue;
         }
 
@@ -494,12 +512,11 @@ class IndicatorDataHandler {
         }
 
         double rsi = _rsiFromAverageGainLoss(avgGain, avgLoss);
-        rsiList.add(rsi);
+        if (i >= visibleStart && i < visibleEnd) {
+          subList.add(rsi);
+        }
       }
 
-      int start = _visibleStart(beginIdx);
-      int end = _visibleEnd(klineData, beginIdx);
-      List<double> subList = start < end ? rsiList.sublist(start, end) : [];
       for (double rsi in subList) {
         if (rsi < 0) continue;
         if (!hasVisibleValue) {
@@ -554,11 +571,15 @@ class IndicatorDataHandler {
         if (dataIndex >= klineData.length) break;
         double end = i + 1;
         double start = i < period ? 0 : i - period;
-        List<KLineData> sublist = klineData.sublist(start.ceil(), end.ceil());
-        double highest = sublist.first.high;
-        double lowest = sublist.first.low;
-        for (var j = 1; j < sublist.length; ++j) {
-          KLineData subData = sublist[j];
+        final startIndex = start.ceil();
+        final endIndex = end.ceil();
+        if (startIndex == endIndex) {
+          throw StateError('No element');
+        }
+        double highest = klineData[startIndex].high;
+        double lowest = klineData[startIndex].low;
+        for (var j = startIndex + 1; j < endIndex; ++j) {
+          KLineData subData = klineData[j];
           if (subData.low < lowest) {
             lowest = subData.low;
           }

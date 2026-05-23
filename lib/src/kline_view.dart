@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import './kline_controller.dart';
+import 'indicators/indicator_data_cache.dart';
 import 'indicators/indicator_info_painter.dart';
 import './kline_info_widget.dart';
 import './kline_long_press_widget.dart';
@@ -150,8 +151,11 @@ class _KLineViewState extends State<KLineView> {
                 dataLength < itemCount ? 0.0 : contentSizeW - containerW;
             _initScrollController(beginOffset);
           }
+          final indicatorDataCache =
+              KLineIndicatorDataCache(KLineController.shared.data, _beginIdx);
           return CustomPaint(
-              painter: KLinePainter(KLineController.shared.data, _beginIdx),
+              painter: KLinePainter(KLineController.shared.data, _beginIdx,
+                  indicatorDataCache: indicatorDataCache),
               size: Size(containerW, containerH),
               child: GestureDetector(
                 onScaleStart: (details) {
@@ -183,7 +187,8 @@ class _KLineViewState extends State<KLineView> {
                           child: RepaintBoundary(
                         child: CustomPaint(
                           painter: KLineIndicatorInfoPainter(
-                              KLineController.shared.data, _beginIdx),
+                              KLineController.shared.data, _beginIdx,
+                              indicatorDataCache: indicatorDataCache),
                         ),
                       )),
                     ),

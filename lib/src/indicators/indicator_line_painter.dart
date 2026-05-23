@@ -33,6 +33,12 @@ class IndicatorLinePainter {
 
     double valueOffset = maxValue - minValue;
     double indicatorX = -(spacing + itemW * 0.5);
+    final linePaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..isAntiAlias = true
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..strokeWidth = 1;
 
     for (int idx = 0; idx < periods.length; ++idx) {
       List<double> values = idx < dataList.length ? dataList[idx] : [];
@@ -40,13 +46,7 @@ class IndicatorLinePainter {
 
       Color color =
           (idx < lineColors.length) ? lineColors[idx] : const Color(0xff333333);
-      var linePaint = Paint()
-        ..style = PaintingStyle.stroke
-        ..color = color
-        ..isAntiAlias = true
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round
-        ..strokeWidth = 1;
+      linePaint.color = color;
 
       double lastY = 0.0;
       double lastX = 0.0;

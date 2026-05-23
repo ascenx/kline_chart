@@ -2,7 +2,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import './indicators/indicator_data_handler.dart';
+import './indicators/indicator_data_cache.dart';
 import './indicators/indicator_result.dart';
 import './kline_chart_style.dart';
 import './kline_controller.dart';
@@ -20,14 +20,18 @@ class KLinePainter extends CustomPainter {
   final KLineVolumeStyle _volumeStyle;
   final List<Color> _indicatorColors;
   final Color _sarColor;
+  final KLineIndicatorDataCache _indicatorDataCache;
 
-  KLinePainter(this.klineData, this.beginIdx)
+  KLinePainter(this.klineData, this.beginIdx,
+      {KLineIndicatorDataCache? indicatorDataCache})
       : _chartStyle = KLineController.shared.chartStyle,
         _candleStyle = KLineController.shared.candleStyle,
         _volumeStyle = KLineController.shared.volumeStyle,
         _indicatorColors =
             List<Color>.of(KLineController.shared.indicatorColors),
-        _sarColor = KLineController.shared.sarColor;
+        _sarColor = KLineController.shared.sarColor,
+        _indicatorDataCache =
+            indicatorDataCache ?? KLineIndicatorDataCache(klineData, beginIdx);
 
   final _riseRectPaint = Paint()
     ..style = PaintingStyle.fill
@@ -68,6 +72,13 @@ class KLinePainter extends CustomPainter {
     ..style = PaintingStyle.fill
     ..color = Colors.white
     ..isAntiAlias = true;
+  final _backgroundPaint = Paint()..style = PaintingStyle.fill;
+  final _textPainter = TextPainter(
+    textDirection: TextDirection.ltr,
+    maxLines: 1,
+  );
+  final _macdPainter = MACDPainter();
+  final _sarPainter = SARPainter();
 
   final _timeLinePaint = Paint()
     ..style = PaintingStyle.stroke
@@ -98,14 +109,9 @@ class KLinePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    canvas.drawRect(
-      Offset.zero & size,
-      Paint()
-        ..style = PaintingStyle.fill
-        ..color = _chartStyle.backgroundColor,
-    );
-    if (klineData.isEmpty) return;
     _configurePaints();
+    canvas.drawRect(Offset.zero & size, _backgroundPaint);
+    if (klineData.isEmpty) return;
 
     // debugPrint('debug: kline painter repaint');
 
@@ -194,12 +200,11 @@ class KLinePainter extends CustomPainter {
     bool isShowEMA =
         KLineController.shared.showMainIndicators.contains(IndicatorType.ema);
     if (isShowMA || isShowEMA) {
-      List<int> indicatorPeriods = isShowMA ? [7, 30] : [7, 25];
       var res = IndicatorResult.empty;
       if (isShowMA) {
-        res = IndicatorDataHandler.ma(klineData, indicatorPeriods, beginIdx);
+        res = _indicatorDataCache.result(IndicatorType.ma);
       } else if (isShowEMA) {
-        res = IndicatorDataHandler.ema(klineData, indicatorPeriods, beginIdx);
+        res = _indicatorDataCache.result(IndicatorType.ema);
       }
 
       mainIndicatorData = res.data;
@@ -216,7 +221,7 @@ class KLinePainter extends CustomPainter {
     bool isShowSAR =
         KLineController.shared.showMainIndicators.contains(IndicatorType.sar);
     if (isShowSAR) {
-      final res = IndicatorDataHandler.sar(klineData, beginIdx);
+      final res = _indicatorDataCache.result(IndicatorType.sar);
       sarIndicatorData = res.data;
       final sarMax = res.maxValue;
       final sarMin = res.minValue;
@@ -232,11 +237,7 @@ class KLinePainter extends CustomPainter {
     bool isShowBOLL =
         KLineController.shared.showMainIndicators.contains(IndicatorType.boll);
     if (isShowBOLL) {
-      int bollPeriod = KLineController.shared.bollPeriod;
-      int bollBandwidth = KLineController.shared.bollBandwidth;
-
-      var res = IndicatorDataHandler.boll(
-          klineData, bollPeriod, bollBandwidth, beginIdx);
+      final res = _indicatorDataCache.result(IndicatorType.boll);
       mainIndicatorData = res.data;
       double bollMax = res.maxValue;
       double bollMin = res.minValue;
@@ -263,32 +264,28 @@ class KLinePainter extends CustomPainter {
     Map<IndicatorType, double> subHighest = {}, subLowest = {};
     IndicatorType macdType = IndicatorType.macd;
     if (showSubIndicators.contains(macdType)) {
-      var res = IndicatorDataHandler.macd(
-          klineData, KLineController.shared.macdPeriods, beginIdx);
+      final res = _indicatorDataCache.result(macdType);
       subIndicatorData[macdType] = res.data;
       subHighest[macdType] = res.maxValue;
       subLowest[macdType] = res.minValue;
     }
     IndicatorType kdjType = IndicatorType.kdj;
     if (showSubIndicators.contains(kdjType)) {
-      var res = IndicatorDataHandler.kdj(
-          klineData, KLineController.shared.kdjPeriods, beginIdx);
+      final res = _indicatorDataCache.result(kdjType);
       subIndicatorData[kdjType] = res.data;
       subHighest[kdjType] = res.maxValue;
       subLowest[kdjType] = res.minValue;
     }
     IndicatorType rsiType = IndicatorType.rsi;
     if (showSubIndicators.contains(rsiType)) {
-      var res = IndicatorDataHandler.rsi(
-          klineData, KLineController.shared.rsiPeriods, beginIdx);
+      final res = _indicatorDataCache.result(rsiType);
       subIndicatorData[rsiType] = res.data;
       subHighest[rsiType] = res.maxValue;
       subLowest[rsiType] = res.minValue;
     }
     IndicatorType wrType = IndicatorType.wr;
     if (showSubIndicators.contains(wrType)) {
-      var res = IndicatorDataHandler.wr(
-          klineData, KLineController.shared.wrPeriods, beginIdx);
+      final res = _indicatorDataCache.result(wrType);
       subIndicatorData[wrType] = res.data;
       subHighest[wrType] = res.maxValue;
       subLowest[wrType] = res.minValue;
@@ -296,7 +293,7 @@ class KLinePainter extends CustomPainter {
 
     IndicatorType obvType = IndicatorType.obv;
     if (showSubIndicators.contains(obvType)) {
-      var res = IndicatorDataHandler.obv(klineData, beginIdx);
+      final res = _indicatorDataCache.result(obvType);
       subIndicatorData[obvType] = res.data;
       subHighest[obvType] = res.maxValue;
       subLowest[obvType] = res.minValue;
@@ -424,14 +421,14 @@ class KLinePainter extends CustomPainter {
 
     if (isShowBOLL) {
       // List<int> indicatorPeriods = isShowMA ? [7, 30] : [7, 25];
-      int bollPeriod = KLineController.shared.bollPeriod;
+      final bollPeriods = _indicatorDataCache.periodsFor(IndicatorType.boll);
       IndicatorLinePainter.paint(
           canvas,
           size,
           mainHeight,
           KLineController.shared.showMainIndicators.first,
           mainIndicatorData,
-          [bollPeriod, bollPeriod, bollPeriod],
+          bollPeriods,
           beginIdx,
           slideOffset,
           highest,
@@ -442,9 +439,10 @@ class KLinePainter extends CustomPainter {
     }
 
     if (isShowSAR) {
-      SARPainter(sarIndicatorData).paint(
+      _sarPainter.paintData(
         canvas,
         size,
+        sarIndicatorData,
         mainHeight,
         slideOffset,
         highest,
@@ -477,14 +475,15 @@ class KLinePainter extends CustomPainter {
           subHighestValue, subLowestValue, size);
 
       if (type == IndicatorType.vol) {
-        VolPainter(klineData, beginIdx)
+        VolPainter(klineData, beginIdx, indicatorDataCache: _indicatorDataCache)
             .paint(canvas, size, maxVolume, slideOffset, showInfo: false);
       } else if (type == IndicatorType.macd) {
-        MACDPainter(subIndicatorData[type] ?? []).paint(
+        _macdPainter.paintData(
             canvas,
             size,
+            subIndicatorData[type] ?? [],
             indicatorH - KLineController.shared.indicatorInfoHeight,
-            KLineController.shared.currentPeriods(type),
+            _indicatorDataCache.periodsFor(type),
             slideOffset,
             subHighest[type] ?? 0.0,
             subLowest[type] ?? 0.0,
@@ -500,7 +499,7 @@ class KLinePainter extends CustomPainter {
             indicatorH - KLineController.shared.indicatorInfoHeight,
             type,
             subIndicatorData[type],
-            KLineController.shared.currentPeriods(type),
+            _indicatorDataCache.periodsFor(type),
             beginIdx,
             slideOffset,
             subHighest[type] ?? 0.0,
@@ -556,6 +555,7 @@ class KLinePainter extends CustomPainter {
       ..color = _chartStyle.currentPriceLineColor
       ..strokeWidth = _chartStyle.currentPriceLineWidth;
     _currentPriceBgPaint.color = _chartStyle.currentPriceBackgroundColor;
+    _backgroundPaint.color = _chartStyle.backgroundColor;
     _timeLinePaint
       ..color = _chartStyle.timeLineColor
       ..strokeWidth = _chartStyle.timeLineWidth;
@@ -577,14 +577,12 @@ class KLinePainter extends CustomPainter {
   /// draw Text in canvas
   void _drawText(Canvas canvas, String text, Offset offset,
       {double? width, TextStyle? style}) {
-    final painter = TextPainter(
-        textDirection: TextDirection.ltr,
-        maxLines: 1,
-        text: TextSpan(text: text, style: style ?? _chartStyle.rulerTextStyle))
-      ..layout();
+    _textPainter.text =
+        TextSpan(text: text, style: style ?? _chartStyle.rulerTextStyle);
+    _textPainter.layout();
 
-    double textWidth = painter.width;
-    painter.paint(
+    double textWidth = _textPainter.width;
+    _textPainter.paint(
         canvas,
         Offset(width != null ? (offset.dx + width - textWidth) : offset.dx,
             offset.dy));
@@ -597,20 +595,18 @@ class KLinePainter extends CustomPainter {
     canvas.drawLine(Offset(offset.dx + (tranOffsetX > 0.0 ? 2 : -2), offset.dy),
         Offset(offset.dx + tranOffsetX, offset.dy), _minMaxLinePaint);
 
-    final painter = TextPainter(
-        textDirection: TextDirection.ltr,
-        maxLines: 1,
-        text: TextSpan(text: text, style: _chartStyle.highLowTextStyle))
-      ..layout();
+    _textPainter.text =
+        TextSpan(text: text, style: _chartStyle.highLowTextStyle);
+    _textPainter.layout();
 
     double textHeight = 15.0;
     double offsetY = offset.dy - textHeight * 0.5;
-    painter.paint(
+    _textPainter.paint(
         canvas,
         Offset(
             offset.dx +
                 tranOffsetX +
-                (tranOffsetX > 0 ? 5 : -painter.width - 5),
+                (tranOffsetX > 0 ? 5 : -_textPainter.width - 5),
             offsetY));
   }
 

@@ -26,10 +26,12 @@ enum IndicatorType {
   const IndicatorType({required this.name, this.isLine = true});
 
   factory IndicatorType.fromName(String name) {
-    if (!IndicatorType.values.map((e) => e.name).toList().contains(name)) {
-      return IndicatorType.ma;
+    for (final value in IndicatorType.values) {
+      if (value.name == name) {
+        return value;
+      }
     }
-    return IndicatorType.values.firstWhere((element) => element.name == name);
+    return IndicatorType.ma;
   }
 }
 

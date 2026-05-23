@@ -6,12 +6,41 @@ import '../kline_controller.dart';
 
 class SARPainter {
   final List<List<double>> dataList;
+  final Paint _pointPaint = Paint()
+    ..style = PaintingStyle.fill
+    ..isAntiAlias = true;
 
-  SARPainter(this.dataList);
+  SARPainter([this.dataList = const []]);
 
   void paint(
     Canvas canvas,
     Size size,
+    double drawAreaHeight,
+    double slideOffset,
+    double maxValue,
+    double minValue, {
+    double top = 0.0,
+    Color? pointColor,
+    List<Color> lineColors = const [],
+  }) {
+    paintData(
+      canvas,
+      size,
+      dataList,
+      drawAreaHeight,
+      slideOffset,
+      maxValue,
+      minValue,
+      top: top,
+      pointColor: pointColor,
+      lineColors: lineColors,
+    );
+  }
+
+  void paintData(
+    Canvas canvas,
+    Size size,
+    List<List<double>> dataList,
     double drawAreaHeight,
     double slideOffset,
     double maxValue,
@@ -37,10 +66,7 @@ class SARPainter {
         (lineColors.isNotEmpty
             ? lineColors.first
             : KLineController.shared.sarColor);
-    final paint = Paint()
-      ..style = PaintingStyle.fill
-      ..color = resolvedPointColor
-      ..isAntiAlias = true;
+    _pointPaint.color = resolvedPointColor;
 
     for (int i = 0; i < values.length; ++i) {
       final value = values[i];
@@ -52,7 +78,7 @@ class SARPainter {
           ? drawAreaHeight * 0.5 + contentTop
           : drawAreaHeight * (1 - (value - minValue) / valueOffset) +
               contentTop;
-      canvas.drawCircle(Offset(x, y), radius, paint);
+      canvas.drawCircle(Offset(x, y), radius, _pointPaint);
     }
   }
 }

@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import './kline_chart_style.dart';
 import './kline_controller.dart';
@@ -52,10 +50,12 @@ class KLineLongPressInfoPainter extends CustomPainter {
   final KLineData klineData;
   final double beginIdx;
 
-  StreamSubscription? longPressSub;
-
   var longPressOffset = Offset.zero;
   final KLineInfoStyle infoStyle;
+  final _textPainter = TextPainter(
+    textDirection: TextDirection.ltr,
+    maxLines: 2,
+  );
 
   KLineLongPressInfoPainter(this.klineData, this.beginIdx, this.longPressOffset,
       [this.infoStyle = const KLineInfoStyle()]);
@@ -86,14 +86,11 @@ class KLineLongPressInfoPainter extends CustomPainter {
 
   void drawText(Canvas canvas, String text, Offset offset, Size canvasSize,
       {double? width}) {
-    final painter = TextPainter(
-        textDirection: TextDirection.ltr,
-        maxLines: 2,
-        text: TextSpan(text: text, style: infoStyle.textStyle))
-      ..layout(maxWidth: width ?? canvasSize.width);
+    _textPainter.text = TextSpan(text: text, style: infoStyle.textStyle);
+    _textPainter.layout(maxWidth: width ?? canvasSize.width);
 
     // double textWidth = painter.width;
-    painter.paint(canvas, Offset(offset.dx, offset.dy));
+    _textPainter.paint(canvas, Offset(offset.dx, offset.dy));
   }
 
   @override
