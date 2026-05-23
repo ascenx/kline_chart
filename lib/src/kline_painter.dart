@@ -108,6 +108,7 @@ class KLinePainter extends CustomPainter {
   final _fallCandleBodyPath = Path();
   final _riseCandleWickPath = Path();
   final _fallCandleWickPath = Path();
+  final _currentPriceDashPath = Path();
 
   // draw kline
 
@@ -676,11 +677,14 @@ class KLinePainter extends CustomPainter {
     // draw dotted line
     double startX = 0.0;
     double dashWidth = 3.0;
+    _currentPriceDashPath.reset();
     while (startX < offset.dx - 2) {
-      canvas.drawLine(Offset(startX, offset.dy),
-          Offset(startX + dashWidth, offset.dy), _currentPricePaint);
+      _currentPriceDashPath
+        ..moveTo(startX, offset.dy)
+        ..lineTo(startX + dashWidth, offset.dy);
       startX += 5.0;
     }
+    canvas.drawPath(_currentPriceDashPath, _currentPricePaint);
   }
 
   static int? selectedVisibleIndexForLongPress({

@@ -7,7 +7,8 @@ class KLineIndicatorDataCache {
   final List<KLineData> klineData;
   final double beginIdx;
   final _IndicatorDataConfig _config;
-  final Map<IndicatorType, IndicatorResult> _results = {};
+  final List<IndicatorResult?> _results =
+      List<IndicatorResult?>.filled(IndicatorType.values.length, null);
 
   KLineIndicatorDataCache(
     this.klineData,
@@ -17,13 +18,13 @@ class KLineIndicatorDataCache {
             controller ?? KLineController.shared);
 
   IndicatorResult result(IndicatorType type) {
-    final cached = _results[type];
+    final cached = _results[type.index];
     if (cached != null) {
       return cached;
     }
 
     final result = _calculate(type);
-    _results[type] = result;
+    _results[type.index] = result;
     return result;
   }
 
