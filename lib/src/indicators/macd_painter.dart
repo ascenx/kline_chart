@@ -7,6 +7,9 @@ class MACDPainter {
 
   MACDPainter([this.dataList = const []]);
 
+  static final TextPainter _infoTextPainter =
+      TextPainter(textDirection: TextDirection.ltr);
+
   final Paint _positivePaint = Paint()
     ..style = PaintingStyle.fill
     ..color = Colors.green
@@ -319,7 +322,7 @@ class MACDPainter {
               : Colors.red,
     ];
 
-    final painter = TextPainter(textDirection: TextDirection.ltr);
+    final painter = _infoTextPainter;
     double lastWidth = 0.0;
     for (int i = 0; i < infoList.length; ++i) {
       painter.text = TextSpan(

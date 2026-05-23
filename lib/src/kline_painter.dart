@@ -121,7 +121,7 @@ class KLinePainter extends CustomPainter {
 
     bool isTimeChart = KLineController.shared.showTimeChart;
 
-    List showSubIndicators = KLineController.shared.showSubIndicators;
+    final showSubIndicators = KLineController.shared.showSubIndicators;
     int subIndicatorCount = showSubIndicators.length;
 
     double spacing = KLineController.shared.spacing;
@@ -509,8 +509,8 @@ class KLinePainter extends CustomPainter {
             indicatorH - KLineController.shared.indicatorInfoHeight,
             _indicatorDataCache.periodsFor(type),
             slideOffset,
-            subHighest[type] ?? 0.0,
-            subLowest[type] ?? 0.0,
+            subHighestValue,
+            subLowestValue,
             top: subTop,
             lineColors: _indicatorColors,
             showInfo: false);
@@ -526,8 +526,8 @@ class KLinePainter extends CustomPainter {
             _indicatorDataCache.periodsFor(type),
             beginIdx,
             slideOffset,
-            subHighest[type] ?? 0.0,
-            subLowest[type] ?? 0.0,
+            subHighestValue,
+            subLowestValue,
             top: subTop,
             lineColors: _indicatorColors,
             showInfo: false);

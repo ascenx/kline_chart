@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kline_chart/kline_chart.dart';
 import 'package:kline_chart/src/indicators/indicator_data_cache.dart';
+import 'package:kline_chart/src/indicators/indicator_info_painter.dart';
 import 'package:kline_chart/src/kline_painter.dart';
 
 const _dataSizes = [2000, 5000, 10000];
@@ -15,17 +16,22 @@ void main() {
   testWidgets('benchmark indicator calculation and chart painting', (_) async {
     debugPrint('Run: fvm flutter test tool/kline_benchmark_test.dart');
     debugPrint('warmup_iterations=$_warmupIterations,iterations=$_iterations');
-    debugPrint('size,indicator_avg_ms,paint_avg_ms');
+    debugPrint('size,indicator_avg_ms,paint_avg_ms,indicator_info_avg_ms');
 
     for (final size in _dataSizes) {
       final data = _buildKLineData(size);
       _configureController(data);
       final beginIdx = (data.length - KLineController.shared.itemCount)
           .clamp(0.0, data.length.toDouble());
+      final indicatorInfoCache = KLineIndicatorDataCache(data, beginIdx);
+      _fillIndicatorCache(indicatorInfoCache);
 
       _runRepeated(
           () => _benchmarkIndicators(data, beginIdx), _warmupIterations);
       _runRepeated(() => _paintChart(data, beginIdx), _warmupIterations);
+      _runRepeated(
+          () => _paintIndicatorInfo(data, beginIdx, indicatorInfoCache),
+          _warmupIterations);
 
       final indicatorAvgMs = _averageMilliseconds(
         () => _benchmarkIndicators(data, beginIdx),
@@ -35,10 +41,15 @@ void main() {
         () => _paintChart(data, beginIdx),
         _iterations,
       );
+      final indicatorInfoAvgMs = _averageMilliseconds(
+        () => _paintIndicatorInfo(data, beginIdx, indicatorInfoCache),
+        _iterations,
+      );
 
       debugPrint(
         '$size,${indicatorAvgMs.toStringAsFixed(3)},'
-        '${paintAvgMs.toStringAsFixed(3)}',
+        '${paintAvgMs.toStringAsFixed(3)},'
+        '${indicatorInfoAvgMs.toStringAsFixed(3)}',
       );
     }
   });
@@ -59,6 +70,10 @@ void _runRepeated(void Function() body, int iterations) {
 
 void _benchmarkIndicators(List<KLineData> data, double beginIdx) {
   final cache = KLineIndicatorDataCache(data, beginIdx);
+  _fillIndicatorCache(cache);
+}
+
+void _fillIndicatorCache(KLineIndicatorDataCache cache) {
   cache.result(IndicatorType.ma);
   cache.result(IndicatorType.boll);
   cache.result(IndicatorType.sar);
@@ -74,6 +89,18 @@ void _paintChart(List<KLineData> data, double beginIdx) {
   final recorder = ui.PictureRecorder();
   final canvas = Canvas(recorder);
   KLinePainter(data, beginIdx).paint(canvas, _chartSize);
+  recorder.endRecording().dispose();
+}
+
+void _paintIndicatorInfo(
+  List<KLineData> data,
+  double beginIdx,
+  KLineIndicatorDataCache cache,
+) {
+  final recorder = ui.PictureRecorder();
+  final canvas = Canvas(recorder);
+  KLineIndicatorInfoPainter(data, beginIdx, indicatorDataCache: cache)
+      .paint(canvas, _chartSize);
   recorder.endRecording().dispose();
 }
 
@@ -114,6 +141,7 @@ void _configureController(List<KLineData> data) {
   KLineController.shared.chartStyle = const KLineChartStyle();
   KLineController.shared.candleStyle = const KLineCandleStyle();
   KLineController.shared.volumeStyle = const KLineVolumeStyle();
+  KLineController.shared.longPressOffset.update(const Offset(240, 160));
 }
 
 List<KLineData> _buildKLineData(int count) {

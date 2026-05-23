@@ -10,6 +10,8 @@ class IndicatorLinePainter {
     ..strokeJoin = StrokeJoin.round
     ..strokeWidth = 1;
   static final Path _linePath = Path();
+  static final TextPainter _infoTextPainter =
+      TextPainter(textDirection: TextDirection.ltr);
 
   static void paint(
       Canvas canvas,
@@ -218,7 +220,7 @@ class IndicatorLinePainter {
   static void showIndicatorInfo(Canvas canvas, Size size, IndicatorType type,
       List<String> infoList, double top,
       {List<Color> lineColors = const [], double topOffset = 0.0}) {
-    final painter = TextPainter(textDirection: TextDirection.ltr);
+    final painter = _infoTextPainter;
 
     double lastWidth = 0.0;
     for (var i = 0; i < infoList.length; ++i) {
