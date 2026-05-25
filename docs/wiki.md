@@ -30,7 +30,7 @@ Add the package to your Flutter project's `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  kline_chart: ^1.0.0
+  kline_chart: ^1.0.1
 ```
 
 Import the main package:

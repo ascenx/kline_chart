@@ -1,3 +1,10 @@
+## 1.0.1
+
+- Add instance-based controllers with `KLineView(controller: ...)` while keeping `KLineController.shared` as the default legacy entry point.
+- Add an example page demonstrating multiple independent chart controllers.
+- Add controller data lifecycle APIs for full data replacement, real-time last-candle updates, appends, prepended history, clearing data, automatic chart refresh, and `KLineView.onLoadMore`.
+- Keep legacy `controller.data = dataList` assignment compatible while recommending named data update methods for production usage.
+
 ## 1.0.0
 
 - Promote the package to the first stable `1.0.0` release.
@@ -13,9 +20,6 @@
 - Fix MACD leading histogram rendering so the first visible bar keeps the correct hollow or filled style.
 - Improve chart drawing performance by reusing indicator info painters, batching paths, reducing repaint overhead, and adding benchmark coverage.
 - Add API and style documentation for advanced controller-based customization.
-- Add instance-based controllers with `KLineView(controller: ...)` while keeping `KLineController.shared` as the default legacy entry point.
-- Add an example page demonstrating multiple independent chart controllers.
-- Add controller data lifecycle APIs for full data replacement, real-time last-candle updates, appends, prepended history, clearing data, automatic chart refresh, and `KLineView.onLoadMore`.
 
 ## 0.0.1+4
 
