@@ -21,6 +21,9 @@ It is designed for crypto, stock, and trading-related apps that need a customiza
 - Main indicators: MA, EMA, BOLL, SAR.
 - Sub indicators: VOL, MACD, KDJ, RSI, WR, OBV.
 - Configurable indicator periods, colors, spacing, and visible item count.
+- Data lifecycle APIs for initial data, real-time last-candle updates, appends,
+  prepended history, and automatic chart refresh.
+- Optional `onLoadMore` callback for loading older candles near the leading edge.
 - Rendering stability for short data sets, flat price data, and zero volume data.
 
 ## Installation
@@ -40,7 +43,8 @@ import 'package:kline_chart/kline_chart.dart';
 
 ## Quick Start
 
-Provide K-line data through `KLineController.shared.data`, then render `KLineView`.
+Provide K-line data through `KLineController.shared.setData`, then render
+`KLineView`.
 
 ```dart
 import 'dart:convert';
@@ -67,7 +71,7 @@ class _KLinePageState extends State<KLinePage> {
     final jsonStr = await rootBundle.loadString('assets/kline.json');
     final jsonList = json.decode(jsonStr) as List;
 
-    KLineController.shared.data = jsonList.map((item) {
+    KLineController.shared.setData(jsonList.map((item) {
       return KLineData(
         open: double.parse(item[1] ?? '0'),
         high: double.parse(item[2] ?? '0'),
@@ -76,14 +80,12 @@ class _KLinePageState extends State<KLinePage> {
         volume: double.parse(item[5] ?? '0'),
         time: item[6] ?? 0,
       );
-    }).toList();
-
-    setState(() {});
+    }).toList());
   }
 
   @override
   Widget build(BuildContext context) {
-    return const SizedBox(
+    return SizedBox(
       height: 400,
       child: KLineView(),
     );
@@ -99,7 +101,7 @@ instance and pass it to the view.
 
 ```dart
 final controller = KLineController()
-  ..data = dataList
+  ..setData(dataList)
   ..showMainIndicators = [IndicatorType.boll]
   ..showSubIndicators = [IndicatorType.vol, IndicatorType.macd];
 
@@ -112,6 +114,36 @@ SizedBox(
 Use `KLineController.shared` when you want one shared global chart
 configuration. Use `KLineController()` when each chart needs separate data,
 indicators, style, formatters, scroll state, and long-press state.
+
+## Data Updates And Loading History
+
+`KLineView` listens to its controller, so these data APIs refresh the chart
+without requiring an outer `setState`.
+
+```dart
+final controller = KLineController.shared;
+
+controller.setData(initialData);
+controller.updateLast(realtimeCandle);
+controller.append(nextPeriodCandle);
+controller.prependHistory(olderCandles);
+controller.clearData();
+```
+
+Use `onLoadMore` to request older candles when the user scrolls near the left
+edge. After loading, call `prependHistory`; the chart keeps the current visible
+candles stable.
+
+```dart
+KLineView(
+  controller: controller,
+  loadMoreThreshold: 2,
+  onLoadMore: () async {
+    final olderCandles = await fetchOlderCandles();
+    controller.prependHistory(olderCandles);
+  },
+)
+```
 
 ## Indicator Configuration
 

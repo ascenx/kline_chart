@@ -54,7 +54,7 @@ The main package exports these public APIs:
 
 The smallest integration has two steps:
 
-1. Assign market data to `KLineController.shared.data`.
+1. Assign market data with `KLineController.shared.setData`.
 2. Render `KLineView`.
 
 ```dart
@@ -69,7 +69,7 @@ class _KLinePageState extends State<KLinePage> {
   @override
   void initState() {
     super.initState();
-    KLineController.shared.data = [
+    KLineController.shared.setData([
       KLineData(
         open: 100,
         high: 108,
@@ -78,12 +78,12 @@ class _KLinePageState extends State<KLinePage> {
         volume: 12000,
         time: 1710000000000,
       ),
-    ];
+    ]);
   }
 
   @override
   Widget build(BuildContext context) {
-    return const SizedBox(
+    return SizedBox(
       height: 400,
       child: KLineView(),
     );
@@ -91,13 +91,13 @@ class _KLinePageState extends State<KLinePage> {
 }
 ```
 
-If data is loaded asynchronously, trigger a rebuild after assigning it:
+If data is loaded asynchronously, set it on the controller. `KLineView`
+listens to controller data updates and refreshes automatically.
 
 ```dart
 Future<void> loadData() async {
   final data = await fetchKLineData();
-  KLineController.shared.data = data;
-  setState(() {});
+  KLineController.shared.setData(data);
 }
 ```
 
@@ -171,7 +171,9 @@ SizedBox(
 
 Give `KLineView` a clear height through `SizedBox`, `Container`, `Expanded`, or another constrained parent. Without a usable height, the chart cannot be painted correctly.
 
-When `KLineController.shared.data` is empty, `KLineView` shows a loading indicator. After data is assigned, the hosting page should rebuild.
+When `KLineController.shared.data` is empty, `KLineView` shows a loading
+indicator. Data APIs such as `setData`, `append`, `updateLast`, and
+`prependHistory` notify the view automatically.
 
 To render an independent chart, pass a controller instance:
 
@@ -571,29 +573,58 @@ setState(() {});
 
 ## Dynamic Data And Config Updates
 
-Append the latest candle:
+Set or replace the full data list:
 
 ```dart
 final controller = KLineController.shared;
 
-controller.data = [
-  ...controller.data,
-  newKLineData,
-];
-setState(() {});
+controller.setData(initialData);
 ```
 
-Update the last candle:
+Update the last candle from a real-time feed:
 
 ```dart
-final controller = KLineController.shared;
-final data = [...controller.data];
+controller.updateLast(realtimeCandle);
+```
 
-if (data.isNotEmpty) {
-  data[data.length - 1] = updatedKLineData;
-  controller.data = data;
-  setState(() {});
-}
+If the controller has no data yet, `updateLast` appends the candle.
+
+Append a newly closed period:
+
+```dart
+controller.append(nextPeriodCandle);
+```
+
+Prepend older history:
+
+```dart
+controller.prependHistory(olderCandles);
+```
+
+`prependHistory` keeps the current visible candles stable when used with
+`KLineView`.
+
+Clear data:
+
+```dart
+controller.clearData();
+```
+
+`controller.data = dataList` is still supported for backward compatibility and
+also notifies `KLineView`, but it does not force the view back to the latest
+candle. The named methods make real-time intent clearer.
+
+Load older candles near the left edge:
+
+```dart
+KLineView(
+  controller: controller,
+  loadMoreThreshold: 2,
+  onLoadMore: () async {
+    final olderCandles = await fetchOlderCandles();
+    controller.prependHistory(olderCandles);
+  },
+)
 ```
 
 Switch indicators:
@@ -725,6 +756,13 @@ controller.volumeFormatter = (value) {
 | Property Or Method | Type | Default | Purpose |
 | --- | --- | --- | --- |
 | `data` | `List<KLineData>` | `[]` | Chart data |
+| `setData(data)` | `void` | - | Replaces all chart data and notifies the view |
+| `updateLast(data)` | `void` | - | Replaces the latest candle, or appends when data is empty |
+| `append(data)` | `void` | - | Appends a newly closed candle and follows the latest candle when already aligned to the end |
+| `prependHistory(data)` | `void` | - | Prepends older candles while keeping the current visible candles stable |
+| `clearData()` | `void` | - | Clears all chart data and notifies the view |
+| `lastDataChange` | `KLineDataChange?` | `null` | Metadata for the latest data update notification |
+| `dataVersion` | `int` | `0` | Monotonic version incremented for each data update |
 | `chartStyle` | `KLineChartStyle` | `const KLineChartStyle()` | Canvas, grid, price labels, and time chart style |
 | `candleStyle` | `KLineCandleStyle` | `const KLineCandleStyle()` | Candlestick style |
 | `volumeStyle` | `KLineVolumeStyle` | `const KLineVolumeStyle()` | Volume bar style |
@@ -779,6 +817,25 @@ controller.volumeFormatter = (value) {
 | --- | --- | --- |
 | `KLineNumberFormatter` | `String Function(double value)` | Formatter for price and volume values |
 | `KLineIndicatorFormatter` | `String Function(double value, IndicatorType type, int? period)` | Formatter for indicator values, with access to indicator type and period |
+
+### `KLineView`
+
+| Constructor Argument | Type | Default | Purpose |
+| --- | --- | --- | --- |
+| `controller` | `KLineController?` | `KLineController.shared` | Data, configuration, interaction, and refresh source |
+| `onLoadMore` | `Future<void> Function()?` | `null` | Called when scrolling near the leading edge |
+| `loadMoreThreshold` | `int` | `3` | Leading-edge candle threshold for `onLoadMore` |
+
+### Data Change Types
+
+| Type | Description |
+| --- | --- |
+| `KLineDataChange` | Contains `type`, `previousLength`, `newLength`, `addedCount`, and `resetView` for the latest data update |
+| `KLineDataChangeType.setData` | Full data replacement |
+| `KLineDataChangeType.updateLast` | Latest candle replacement |
+| `KLineDataChangeType.append` | New candle appended to the right |
+| `KLineDataChangeType.prependHistory` | Older candles inserted at the left |
+| `KLineDataChangeType.clear` | Data cleared |
 
 ### `IndicatorType`
 
@@ -880,11 +937,11 @@ These properties are mainly for drawing-area debugging. App integrations usually
 
 ### Why does the chart still show loading after data is set?
 
-`KLineView` reads from `KLineController.shared.data`. After assigning data asynchronously, rebuild the page:
+Use `setData` when loading data asynchronously. `KLineView` listens to the
+controller and refreshes automatically:
 
 ```dart
-KLineController.shared.data = dataList;
-setState(() {});
+KLineController.shared.setData(dataList);
 ```
 
 ### Why do multiple charts affect each other's configuration?
@@ -892,7 +949,7 @@ setState(() {});
 Multiple `KLineView()` instances without an explicit controller use `KLineController.shared`. Pass a separate controller to each chart when they need independent state:
 
 ```dart
-KLineView(controller: KLineController()..data = dataList)
+KLineView(controller: KLineController()..setData(dataList))
 ```
 
 ### Why is there blank space to the right of the latest candle?

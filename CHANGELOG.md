@@ -15,6 +15,7 @@
 - Add API and style documentation for advanced controller-based customization.
 - Add instance-based controllers with `KLineView(controller: ...)` while keeping `KLineController.shared` as the default legacy entry point.
 - Add an example page demonstrating multiple independent chart controllers.
+- Add controller data lifecycle APIs for full data replacement, real-time last-candle updates, appends, prepended history, clearing data, automatic chart refresh, and `KLineView.onLoadMore`.
 
 ## 0.0.1+4
 

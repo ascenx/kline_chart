@@ -13,9 +13,15 @@ const double _scrollOffsetTolerance = 0.01;
 
 class KLineView extends StatefulWidget {
   final KLineController controller;
+  final Future<void> Function()? onLoadMore;
+  final int loadMoreThreshold;
 
-  KLineView({super.key, KLineController? controller})
-      : controller = controller ?? KLineController.shared;
+  KLineView({
+    super.key,
+    KLineController? controller,
+    this.onLoadMore,
+    this.loadMoreThreshold = 3,
+  }) : controller = controller ?? KLineController.shared;
 
   @override
   State<StatefulWidget> createState() => _KLineViewState();
@@ -34,6 +40,7 @@ class _KLineViewState extends State<KLineView> {
   double _pendingScrollBeginIdx = 0.0;
   double _pendingScrollItemCount = 0.0;
   bool _hasPendingScrollSync = false;
+  bool _isLoadingMore = false;
 
   // int _dataLength = 0;
 
@@ -47,6 +54,138 @@ class _KLineViewState extends State<KLineView> {
       _klineDidScroll(offsetX);
     });
     _hasInitScrollController = true;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_handleControllerChanged);
+  }
+
+  @override
+  void didUpdateWidget(covariant KLineView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller == widget.controller) return;
+
+    oldWidget.controller.removeListener(_handleControllerChanged);
+    widget.controller.addListener(_handleControllerChanged);
+    _klineScrollCtr?.dispose();
+    _klineScrollCtr = null;
+    _hasInitScrollController = false;
+    _beginIdx = -1.0;
+    _hasPendingScrollSync = false;
+    _isLoadingMore = false;
+  }
+
+  void _handleControllerChanged() {
+    if (!mounted) return;
+
+    final change = widget.controller.lastDataChange;
+    if (change == null) {
+      setState(() {});
+      return;
+    }
+
+    switch (change.type) {
+      case KLineDataChangeType.setData:
+        if (change.resetView) {
+          _resetScrollToLatest();
+        } else {
+          setState(() {});
+        }
+        break;
+      case KLineDataChangeType.clear:
+        _resetScrollToLatest();
+        break;
+      case KLineDataChangeType.updateLast:
+        setState(() {});
+        break;
+      case KLineDataChangeType.append:
+        _handleAppendedData(change);
+        break;
+      case KLineDataChangeType.prependHistory:
+        _handlePrependedData(change);
+        break;
+    }
+  }
+
+  void _resetScrollToLatest() {
+    final dataLength = widget.controller.data.length;
+    if (dataLength == 0) {
+      setState(() {
+        _beginIdx = -1.0;
+      });
+      return;
+    }
+
+    if (!_hasInitScrollController || _klineScrollCtr == null) {
+      setState(() {
+        _beginIdx = -1.0;
+      });
+      return;
+    }
+
+    final nextBeginIdx = _maxBeginIndexForCurrentData(
+      dataLength: dataLength,
+      trailingBlankItemCount: widget.controller.trailingBlankItemCount,
+    );
+    setState(() {
+      _beginIdx = nextBeginIdx;
+    });
+    _syncScrollOffset(nextBeginIdx, widget.controller.itemCount);
+  }
+
+  void _handleAppendedData(KLineDataChange change) {
+    if (_beginIdx < 0) {
+      _resetScrollToLatest();
+      return;
+    }
+
+    final oldLatestBeginIdx = _maxBeginIndexForCurrentData(
+      dataLength: change.previousLength,
+      trailingBlankItemCount: widget.controller.trailingBlankItemCount,
+    );
+    final isFollowingLatest =
+        _beginIdx + _scrollIndexTolerance >= oldLatestBeginIdx;
+    if (!isFollowingLatest) {
+      setState(() {});
+      return;
+    }
+
+    final nextBeginIdx = _maxBeginIndexForCurrentData(
+      dataLength: change.newLength,
+      trailingBlankItemCount: widget.controller.trailingBlankItemCount,
+    );
+    setState(() {
+      _beginIdx = nextBeginIdx;
+    });
+    _syncScrollOffset(nextBeginIdx, widget.controller.itemCount);
+  }
+
+  void _handlePrependedData(KLineDataChange change) {
+    if (_beginIdx < 0 || change.addedCount <= 0) {
+      setState(() {});
+      return;
+    }
+
+    final nextBeginIdx = _beginIdx + change.addedCount;
+    setState(() {
+      _beginIdx = nextBeginIdx;
+    });
+    _syncScrollOffset(nextBeginIdx, widget.controller.itemCount);
+  }
+
+  double _maxBeginIndexForCurrentData({
+    required int dataLength,
+    required double trailingBlankItemCount,
+  }) {
+    return KLineController.maxBeginIndexFor(
+      dataLength: dataLength,
+      itemCount: widget.controller.itemCount,
+      trailingBlankItemCount: trailingBlankItemCount,
+      minTrailingVisibleItemCount:
+          widget.controller.minTrailingVisibleItemCount,
+    );
   }
 
   void _klineDidScroll(double offsetX) {
@@ -67,7 +206,30 @@ class _KLineViewState extends State<KLineView> {
     );
     if ((_beginIdx - beginIdx).abs() < _scrollIndexTolerance) return;
     _beginIdx = beginIdx;
+    _maybeLoadMore(beginIdx);
     setState(() {});
+  }
+
+  void _maybeLoadMore(double beginIdx) {
+    final onLoadMore = widget.onLoadMore;
+    if (onLoadMore == null ||
+        _isLoadingMore ||
+        beginIdx > widget.loadMoreThreshold) {
+      return;
+    }
+
+    _isLoadingMore = true;
+    Future<void>.sync(onLoadMore)
+        .catchError((Object error, StackTrace stackTrace) {
+      FlutterError.reportError(FlutterErrorDetails(
+        exception: error,
+        stack: stackTrace,
+        library: 'kline_chart',
+        context: ErrorDescription('while loading more K-line history'),
+      ));
+    }).whenComplete(() {
+      _isLoadingMore = false;
+    });
   }
 
   void _klineDidZoom(ScaleUpdateDetails details) {
@@ -255,6 +417,7 @@ class _KLineViewState extends State<KLineView> {
 
   @override
   void dispose() {
+    widget.controller.removeListener(_handleControllerChanged);
     _klineScrollCtr?.dispose();
     super.dispose();
   }

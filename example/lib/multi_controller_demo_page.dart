@@ -104,8 +104,8 @@ class _MultiControllerDemoPageState extends State<MultiControllerDemoPage> {
       ];
 
     loadDemoKLineData().then((data) {
-      _trendController.data = data;
-      _momentumController.data = List<KLineData>.of(data);
+      _trendController.setData(data);
+      _momentumController.setData(List<KLineData>.of(data));
       setState(() {
         _loaded = true;
       });

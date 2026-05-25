@@ -52,7 +52,7 @@ import 'package:kline_chart/kline_chart.dart';
 
 最小接入只需要两步：
 
-1. 把行情数据写入 `KLineController.shared.data`。
+1. 通过 `KLineController.shared.setData` 写入行情数据。
 2. 在页面中渲染 `KLineView`。
 
 ```dart
@@ -67,7 +67,7 @@ class _KLinePageState extends State<KLinePage> {
   @override
   void initState() {
     super.initState();
-    KLineController.shared.data = [
+    KLineController.shared.setData([
       KLineData(
         open: 100,
         high: 108,
@@ -76,12 +76,12 @@ class _KLinePageState extends State<KLinePage> {
         volume: 12000,
         time: 1710000000000,
       ),
-    ];
+    ]);
   }
 
   @override
   Widget build(BuildContext context) {
-    return const SizedBox(
+    return SizedBox(
       height: 400,
       child: KLineView(),
     );
@@ -89,13 +89,12 @@ class _KLinePageState extends State<KLinePage> {
 }
 ```
 
-如果数据是异步加载的，需要在数据写入后触发页面刷新：
+如果数据是异步加载的，写入 controller 即可。`KLineView` 会监听 controller 的数据更新并自动刷新。
 
 ```dart
 Future<void> loadData() async {
   final data = await fetchKLineData();
-  KLineController.shared.data = data;
-  setState(() {});
+  KLineController.shared.setData(data);
 }
 ```
 
@@ -168,7 +167,7 @@ SizedBox(
 
 推荐给 `KLineView` 一个明确高度，例如 `SizedBox`、`Container`、`Expanded` 或外层布局约束。没有可用高度时，图表无法正确绘制。
 
-当 `KLineController.shared.data` 为空时，`KLineView` 会显示一个加载状态。数据写入后，业务页面需要触发一次 rebuild。
+当 `KLineController.shared.data` 为空时，`KLineView` 会显示一个加载状态。`setData`、`append`、`updateLast`、`prependHistory` 等数据 API 会自动通知视图刷新。
 
 如果需要渲染互不影响的独立图表，可以传入 controller 实例：
 
@@ -566,29 +565,55 @@ setState(() {});
 
 ## 动态更新数据和配置
 
-追加最新 K 线：
+设置或替换完整数据：
 
 ```dart
 final controller = KLineController.shared;
 
-controller.data = [
-  ...controller.data,
-  newKLineData,
-];
-setState(() {});
+controller.setData(initialData);
 ```
 
-更新最后一根 K 线：
+通过实时行情更新最后一根 K 线：
 
 ```dart
-final controller = KLineController.shared;
-final data = [...controller.data];
+controller.updateLast(realtimeCandle);
+```
 
-if (data.isNotEmpty) {
-  data[data.length - 1] = updatedKLineData;
-  controller.data = data;
-  setState(() {});
-}
+如果当前没有数据，`updateLast` 会自动追加这一根 K 线。
+
+追加新周期 K 线：
+
+```dart
+controller.append(nextPeriodCandle);
+```
+
+前置更早的历史 K 线：
+
+```dart
+controller.prependHistory(olderCandles);
+```
+
+`prependHistory` 配合 `KLineView` 使用时，会保持当前可见 K 线不跳动。
+
+清空数据：
+
+```dart
+controller.clearData();
+```
+
+`controller.data = dataList` 仍然兼容旧用法，并且也会通知 `KLineView` 刷新；但它不会强制视图回到最新 K 线。推荐使用语义更明确的方法。
+
+滚动到左侧附近时加载历史数据：
+
+```dart
+KLineView(
+  controller: controller,
+  loadMoreThreshold: 2,
+  onLoadMore: () async {
+    final olderCandles = await fetchOlderCandles();
+    controller.prependHistory(olderCandles);
+  },
+)
 ```
 
 切换指标：
@@ -720,6 +745,13 @@ controller.volumeFormatter = (value) {
 | 属性或方法 | 类型 | 默认值 | 用途 |
 | --- | --- | --- | --- |
 | `data` | `List<KLineData>` | `[]` | 图表数据 |
+| `setData(data)` | `void` | - | 替换全部图表数据并通知视图刷新 |
+| `updateLast(data)` | `void` | - | 替换最新一根 K 线；无数据时自动追加 |
+| `append(data)` | `void` | - | 追加新周期 K 线；如果当前已对齐最新 K 线，会继续跟随最新位置 |
+| `prependHistory(data)` | `void` | - | 前置历史 K 线，并保持当前可见 K 线不跳动 |
+| `clearData()` | `void` | - | 清空图表数据并通知视图刷新 |
+| `lastDataChange` | `KLineDataChange?` | `null` | 最近一次数据更新通知的元信息 |
+| `dataVersion` | `int` | `0` | 每次数据更新递增的版本号 |
 | `chartStyle` | `KLineChartStyle` | `const KLineChartStyle()` | 图表画布、网格、价格标签、分时线样式 |
 | `candleStyle` | `KLineCandleStyle` | `const KLineCandleStyle()` | 蜡烛图样式 |
 | `volumeStyle` | `KLineVolumeStyle` | `const KLineVolumeStyle()` | 成交量柱样式 |
@@ -774,6 +806,25 @@ controller.volumeFormatter = (value) {
 | --- | --- | --- |
 | `KLineNumberFormatter` | `String Function(double value)` | 价格和成交量格式化函数 |
 | `KLineIndicatorFormatter` | `String Function(double value, IndicatorType type, int? period)` | 指标值格式化函数，可根据指标类型和周期返回不同展示文本 |
+
+### `KLineView`
+
+| 构造参数 | 类型 | 默认值 | 用途 |
+| --- | --- | --- | --- |
+| `controller` | `KLineController?` | `KLineController.shared` | 数据、配置、交互状态和刷新来源 |
+| `onLoadMore` | `Future<void> Function()?` | `null` | 滚动到左侧边缘附近时触发加载更多 |
+| `loadMoreThreshold` | `int` | `3` | 触发 `onLoadMore` 的左侧 K 线阈值 |
+
+### 数据变更类型
+
+| 类型 | 说明 |
+| --- | --- |
+| `KLineDataChange` | 包含最近一次数据更新的 `type`、`previousLength`、`newLength`、`addedCount` 和 `resetView` |
+| `KLineDataChangeType.setData` | 替换全部数据 |
+| `KLineDataChangeType.updateLast` | 替换最新一根 K 线 |
+| `KLineDataChangeType.append` | 右侧追加新 K 线 |
+| `KLineDataChangeType.prependHistory` | 左侧插入历史 K 线 |
+| `KLineDataChangeType.clear` | 清空数据 |
 
 ### `IndicatorType`
 
@@ -875,11 +926,10 @@ controller.volumeFormatter = (value) {
 
 ### 为什么设置了数据但图表还在加载？
 
-`KLineView` 从 `KLineController.shared.data` 读取数据。异步写入数据后，需要触发页面 rebuild：
+异步加载数据时使用 `setData`。`KLineView` 会监听 controller 并自动刷新：
 
 ```dart
-KLineController.shared.data = dataList;
-setState(() {});
+KLineController.shared.setData(dataList);
 ```
 
 ### 为什么多个图表配置会互相影响？
@@ -887,7 +937,7 @@ setState(() {});
 未显式传入 controller 的多个 `KLineView()` 会使用 `KLineController.shared`。如果它们需要独立状态，请给每个图表传入单独的 controller：
 
 ```dart
-KLineView(controller: KLineController()..data = dataList)
+KLineView(controller: KLineController()..setData(dataList))
 ```
 
 ### 为什么最新 K 线右边有空白？

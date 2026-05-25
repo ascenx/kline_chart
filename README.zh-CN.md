@@ -23,6 +23,8 @@ KLine Chart 是一个轻量级 Flutter K 线图组件，用于构建交易、行
 - 支持自定义指标周期、颜色、间距、可见 K 线数量。
 - 支持最新 K 线右侧预留空白，并限制最右侧最少保留真实 K 线数量。
 - 支持价格、成交量、指标值的格式化自定义。
+- 支持初始数据、实时更新最后一根 K 线、追加新周期、前置历史数据和自动刷新。
+- 支持滚动到左侧边缘附近时通过 `onLoadMore` 加载更多历史 K 线。
 - 对短数据、平盘数据、零成交量数据做了稳定性处理。
 
 ## 安装
@@ -42,7 +44,7 @@ import 'package:kline_chart/kline_chart.dart';
 
 ## 快速开始
 
-通过 `KLineController.shared.data` 设置 K 线数据，然后渲染 `KLineView`。
+通过 `KLineController.shared.setData` 设置 K 线数据，然后渲染 `KLineView`。
 
 ```dart
 import 'dart:convert';
@@ -69,7 +71,7 @@ class _KLinePageState extends State<KLinePage> {
     final jsonStr = await rootBundle.loadString('assets/kline.json');
     final jsonList = json.decode(jsonStr) as List;
 
-    KLineController.shared.data = jsonList.map((item) {
+    KLineController.shared.setData(jsonList.map((item) {
       return KLineData(
         open: double.parse(item[1] ?? '0'),
         high: double.parse(item[2] ?? '0'),
@@ -78,14 +80,12 @@ class _KLinePageState extends State<KLinePage> {
         volume: double.parse(item[5] ?? '0'),
         time: item[6] ?? 0,
       );
-    }).toList();
-
-    setState(() {});
+    }).toList());
   }
 
   @override
   Widget build(BuildContext context) {
-    return const SizedBox(
+    return SizedBox(
       height: 400,
       child: KLineView(),
     );
@@ -99,7 +99,7 @@ class _KLinePageState extends State<KLinePage> {
 
 ```dart
 final controller = KLineController()
-  ..data = dataList
+  ..setData(dataList)
   ..showMainIndicators = [IndicatorType.boll]
   ..showSubIndicators = [IndicatorType.vol, IndicatorType.macd];
 
@@ -110,6 +110,33 @@ SizedBox(
 ```
 
 只需要一个全局图表时可以继续用 `KLineController.shared`。需要不同数据、指标、样式、格式化、滚动状态和长按状态互相隔离时，使用 `KLineController()`。
+
+## 数据更新和加载历史
+
+`KLineView` 会监听 controller，下面这些数据 API 会自动刷新图表，不需要外层再手动 `setState`。
+
+```dart
+final controller = KLineController.shared;
+
+controller.setData(initialData);
+controller.updateLast(realtimeCandle);
+controller.append(nextPeriodCandle);
+controller.prependHistory(olderCandles);
+controller.clearData();
+```
+
+当用户滚动到左侧边缘附近时，可以通过 `onLoadMore` 加载更早的历史 K 线。加载完成后调用 `prependHistory`，图表会保持当前可见 K 线不跳动。
+
+```dart
+KLineView(
+  controller: controller,
+  loadMoreThreshold: 2,
+  onLoadMore: () async {
+    final olderCandles = await fetchOlderCandles();
+    controller.prependHistory(olderCandles);
+  },
+)
+```
 
 ## 数据模型
 

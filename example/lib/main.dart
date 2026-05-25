@@ -40,7 +40,7 @@ class _MyHomePageState extends State<MyHomePage> {
     super.initState();
 
     loadDemoKLineData().then((jsonData) {
-      KLineController.shared.data = jsonData;
+      KLineController.shared.setData(jsonData);
       setState(() {});
     });
   }

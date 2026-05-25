@@ -134,6 +134,80 @@ void main() {
     });
   });
 
+  group('KLineController data updates', () {
+    test('data lifecycle methods update data and notify listeners', () {
+      final controller = KLineController();
+      final changes = <KLineDataChange>[];
+      controller.addListener(() {
+        final change = controller.lastDataChange;
+        if (change != null) {
+          changes.add(change);
+        }
+      });
+
+      final initialData = _buildKLineData(2);
+      controller.setData(initialData);
+
+      final updatedLast = KLineData(close: 99, time: 1);
+      controller.updateLast(updatedLast);
+
+      final appended = KLineData(close: 100, time: 2);
+      controller.append(appended);
+
+      final history = [
+        KLineData(close: 1, time: -2),
+        KLineData(close: 2, time: -1),
+      ];
+      controller.prependHistory(history);
+
+      controller.clearData();
+
+      expect(
+        changes.map((change) => change.type),
+        [
+          KLineDataChangeType.setData,
+          KLineDataChangeType.updateLast,
+          KLineDataChangeType.append,
+          KLineDataChangeType.prependHistory,
+          KLineDataChangeType.clear,
+        ],
+      );
+      expect(changes[0].previousLength, 0);
+      expect(changes[0].newLength, 2);
+      expect(changes[0].resetView, isTrue);
+      expect(changes[1].previousLength, 2);
+      expect(changes[1].newLength, 2);
+      expect(changes[2].addedCount, 1);
+      expect(changes[3].addedCount, 2);
+      expect(controller.data, isEmpty);
+    });
+
+    test('data setter keeps the old assignment API and notifies listeners', () {
+      final controller = KLineController();
+      KLineDataChange? change;
+      controller.addListener(() {
+        change = controller.lastDataChange;
+      });
+
+      controller.data = _buildKLineData(3);
+
+      expect(controller.data, hasLength(3));
+      expect(change?.type, KLineDataChangeType.setData);
+      expect(change?.newLength, 3);
+      expect(change?.resetView, isFalse);
+    });
+
+    test('updateLast appends when the controller has no data', () {
+      final controller = KLineController();
+      final candle = KLineData(close: 12, time: 1);
+
+      controller.updateLast(candle);
+
+      expect(controller.data, [same(candle)]);
+      expect(controller.lastDataChange?.type, KLineDataChangeType.append);
+    });
+  });
+
   group('KLineController.beginIndexForScrollOffset', () {
     test('clamps trailing overscroll to the last fully visible candle', () {
       const dataLength = 100;
@@ -533,6 +607,208 @@ void main() {
           .widget<SingleChildScrollView>(find.byType(SingleChildScrollView));
 
       expect(scrollView.controller?.offset, 0);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('rebuilds automatically when controller data changes',
+        (tester) async {
+      final controller = KLineController()
+        ..showMainIndicators = []
+        ..showSubIndicators = [];
+
+      await tester.pumpWidget(MaterialApp(
+        home: Center(
+          child: SizedBox(
+            width: 300,
+            height: 240,
+            child: KLineView(controller: controller),
+          ),
+        ),
+      ));
+      await tester.pump();
+
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+      controller.setData(_buildKLineData(5));
+      await tester.pump();
+
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('keeps the visible candles stable when history is prepended',
+        (tester) async {
+      final controller = KLineController()
+        ..data = _buildKLineData(40)
+        ..itemCount = 10
+        ..trailingBlankItemCount = 0
+        ..maxTrailingBlankItemCount = 0
+        ..showMainIndicators = []
+        ..showSubIndicators = [];
+
+      await tester.pumpWidget(MaterialApp(
+        home: Center(
+          child: SizedBox(
+            width: 300,
+            height: 240,
+            child: KLineView(controller: controller),
+          ),
+        ),
+      ));
+      await tester.pump();
+
+      final scrollController = tester
+          .widget<SingleChildScrollView>(find.byType(SingleChildScrollView))
+          .controller!;
+      scrollController.jumpTo(300);
+      await tester.pump();
+
+      controller.prependHistory(_buildKLineData(5));
+      await tester.pump();
+      await tester.pump();
+
+      expect(scrollController.offset, closeTo(450, 0.000001));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('keeps following the latest candle when new candles append',
+        (tester) async {
+      final controller = KLineController()
+        ..data = _buildKLineData(40)
+        ..itemCount = 10
+        ..trailingBlankItemCount = 0
+        ..maxTrailingBlankItemCount = 0
+        ..showMainIndicators = []
+        ..showSubIndicators = [];
+
+      await tester.pumpWidget(MaterialApp(
+        home: Center(
+          child: SizedBox(
+            width: 300,
+            height: 240,
+            child: KLineView(controller: controller),
+          ),
+        ),
+      ));
+      await tester.pump();
+
+      final scrollController = tester
+          .widget<SingleChildScrollView>(find.byType(SingleChildScrollView))
+          .controller!;
+
+      expect(scrollController.offset, closeTo(900, 0.000001));
+
+      controller.append(KLineData(close: 99, time: 40));
+      await tester.pump();
+      await tester.pump();
+
+      expect(scrollController.offset, closeTo(930, 0.000001));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('does not jump when appending away from the latest candle',
+        (tester) async {
+      final controller = KLineController()
+        ..data = _buildKLineData(40)
+        ..itemCount = 10
+        ..showMainIndicators = []
+        ..showSubIndicators = [];
+
+      await tester.pumpWidget(MaterialApp(
+        home: Center(
+          child: SizedBox(
+            width: 300,
+            height: 240,
+            child: KLineView(controller: controller),
+          ),
+        ),
+      ));
+      await tester.pump();
+
+      final scrollController = tester
+          .widget<SingleChildScrollView>(find.byType(SingleChildScrollView))
+          .controller!;
+      scrollController.jumpTo(300);
+      await tester.pump();
+
+      controller.append(KLineData(close: 99, time: 40));
+      await tester.pump();
+      await tester.pump();
+
+      expect(scrollController.offset, closeTo(300, 0.000001));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('keeps the old data setter from forcing a latest reset',
+        (tester) async {
+      final controller = KLineController()
+        ..data = _buildKLineData(40)
+        ..itemCount = 10
+        ..trailingBlankItemCount = 0
+        ..maxTrailingBlankItemCount = 0
+        ..showMainIndicators = []
+        ..showSubIndicators = [];
+
+      await tester.pumpWidget(MaterialApp(
+        home: Center(
+          child: SizedBox(
+            width: 300,
+            height: 240,
+            child: KLineView(controller: controller),
+          ),
+        ),
+      ));
+      await tester.pump();
+
+      final scrollController = tester
+          .widget<SingleChildScrollView>(find.byType(SingleChildScrollView))
+          .controller!;
+      scrollController.jumpTo(300);
+      await tester.pump();
+
+      controller.data = [
+        ...controller.data,
+        KLineData(close: 99, time: 40),
+      ];
+      await tester.pump();
+
+      expect(scrollController.offset, closeTo(300, 0.000001));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('calls onLoadMore when scrolling near the leading edge',
+        (tester) async {
+      var loadMoreCount = 0;
+      final controller = KLineController()
+        ..data = _buildKLineData(40)
+        ..itemCount = 10
+        ..showMainIndicators = []
+        ..showSubIndicators = [];
+
+      await tester.pumpWidget(MaterialApp(
+        home: Center(
+          child: SizedBox(
+            width: 300,
+            height: 240,
+            child: KLineView(
+              controller: controller,
+              loadMoreThreshold: 2,
+              onLoadMore: () async {
+                loadMoreCount += 1;
+              },
+            ),
+          ),
+        ),
+      ));
+      await tester.pump();
+
+      final scrollController = tester
+          .widget<SingleChildScrollView>(find.byType(SingleChildScrollView))
+          .controller!;
+      scrollController.jumpTo(30);
+      await tester.pump();
+
+      expect(loadMoreCount, 1);
       expect(tester.takeException(), isNull);
     });
   });

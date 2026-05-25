@@ -63,8 +63,110 @@ class KLineZoomResult {
   });
 }
 
-class KLineController {
-  List<KLineData> data = [];
+enum KLineDataChangeType {
+  setData,
+  updateLast,
+  append,
+  prependHistory,
+  clear,
+}
+
+class KLineDataChange {
+  final KLineDataChangeType type;
+  final int previousLength;
+  final int newLength;
+  final int addedCount;
+  final bool resetView;
+
+  const KLineDataChange({
+    required this.type,
+    required this.previousLength,
+    required this.newLength,
+    this.addedCount = 0,
+    this.resetView = false,
+  });
+}
+
+class KLineController extends ChangeNotifier {
+  List<KLineData> _data = [];
+
+  List<KLineData> get data => _data;
+
+  set data(List<KLineData> value) => setData(value, resetView: false);
+
+  KLineDataChange? _lastDataChange;
+
+  KLineDataChange? get lastDataChange => _lastDataChange;
+
+  int _dataVersion = 0;
+
+  int get dataVersion => _dataVersion;
+
+  void setData(List<KLineData> value, {bool resetView = true}) {
+    final previousLength = _data.length;
+    _data = value;
+    _notifyDataChanged(KLineDataChange(
+      type: KLineDataChangeType.setData,
+      previousLength: previousLength,
+      newLength: _data.length,
+      resetView: resetView,
+    ));
+  }
+
+  void updateLast(KLineData value) {
+    if (_data.isEmpty) {
+      append(value);
+      return;
+    }
+
+    final previousLength = _data.length;
+    _data[_data.length - 1] = value;
+    _notifyDataChanged(KLineDataChange(
+      type: KLineDataChangeType.updateLast,
+      previousLength: previousLength,
+      newLength: _data.length,
+    ));
+  }
+
+  void append(KLineData value) {
+    final previousLength = _data.length;
+    _data.add(value);
+    _notifyDataChanged(KLineDataChange(
+      type: KLineDataChangeType.append,
+      previousLength: previousLength,
+      newLength: _data.length,
+      addedCount: 1,
+    ));
+  }
+
+  void prependHistory(List<KLineData> values) {
+    if (values.isEmpty) return;
+
+    final previousLength = _data.length;
+    _data.insertAll(0, values);
+    _notifyDataChanged(KLineDataChange(
+      type: KLineDataChangeType.prependHistory,
+      previousLength: previousLength,
+      newLength: _data.length,
+      addedCount: values.length,
+    ));
+  }
+
+  void clearData() {
+    final previousLength = _data.length;
+    _data = [];
+    _notifyDataChanged(KLineDataChange(
+      type: KLineDataChangeType.clear,
+      previousLength: previousLength,
+      newLength: 0,
+    ));
+  }
+
+  void _notifyDataChanged(KLineDataChange change) {
+    _lastDataChange = change;
+    _dataVersion += 1;
+    notifyListeners();
+  }
 
   KLineChartStyle chartStyle = const KLineChartStyle();
   KLineCandleStyle candleStyle = const KLineCandleStyle();
