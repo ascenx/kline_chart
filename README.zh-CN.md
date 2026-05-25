@@ -93,6 +93,24 @@ class _KLinePageState extends State<KLinePage> {
 }
 ```
 
+## 独立控制器
+
+`KLineView()` 默认使用 `KLineController.shared`，保持旧用法兼容。如果同一个页面需要渲染多个互不影响的图表，可以创建独立 controller 并传给 `KLineView`。
+
+```dart
+final controller = KLineController()
+  ..data = dataList
+  ..showMainIndicators = [IndicatorType.boll]
+  ..showSubIndicators = [IndicatorType.vol, IndicatorType.macd];
+
+SizedBox(
+  height: 400,
+  child: KLineView(controller: controller),
+)
+```
+
+只需要一个全局图表时可以继续用 `KLineController.shared`。需要不同数据、指标、样式、格式化、滚动状态和长按状态互相隔离时，使用 `KLineController()`。
+
 ## 数据模型
 
 每一根 K 线由 `KLineData` 表示：
@@ -112,7 +130,7 @@ KLineData(
 
 ## 指标配置
 
-`KLineController.shared` 是全局配置入口。请在重建 `KLineView` 前设置相关参数。
+`KLineController.shared` 是默认共享配置入口。如果使用独立图表，请配置传给 `KLineView` 的 controller 实例。
 
 ```dart
 final controller = KLineController.shared;

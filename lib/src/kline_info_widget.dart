@@ -6,14 +6,20 @@ import './kline_data.dart';
 class KlineInfoWidget extends StatelessWidget {
   final List<KLineData> klineData;
   final double beginIdx;
+  final KLineController controller;
 
-  const KlineInfoWidget(this.klineData, this.beginIdx, {super.key});
+  KlineInfoWidget(
+    this.klineData,
+    this.beginIdx, {
+    super.key,
+    KLineController? controller,
+  }) : controller = controller ?? KLineController.shared;
 
   @override
   Widget build(BuildContext context) {
-    var ctr = KLineController.shared;
+    var ctr = controller;
     return ValueListenableBuilder<Offset>(
-        valueListenable: KLineController.shared.longPressOffset,
+        valueListenable: controller.longPressOffset,
         builder: (ctx, offset, child) {
           double offsetX = offset.dx;
           int index = KLineController.dataIndexForLocalX(
@@ -37,7 +43,12 @@ class KlineInfoWidget extends StatelessWidget {
                 child: CustomPaint(
                   size: Size(ctr.infoWidgetMaxWidth ?? 120, 110),
                   painter: KLineLongPressInfoPainter(
-                      data, beginIdx, offset, ctr.infoStyle),
+                    data,
+                    beginIdx,
+                    offset,
+                    controller: controller,
+                    infoStyle: ctr.infoStyle,
+                  ),
                 ));
           } else {
             return const SizedBox.shrink();
@@ -52,6 +63,7 @@ class KLineLongPressInfoPainter extends CustomPainter {
 
   var longPressOffset = Offset.zero;
   final KLineInfoStyle infoStyle;
+  final KLineController controller;
   final KLineNumberFormatter? _priceFormatter;
   final KLineNumberFormatter? _volumeFormatter;
   final _textPainter = TextPainter(
@@ -59,15 +71,21 @@ class KLineLongPressInfoPainter extends CustomPainter {
     maxLines: 2,
   );
 
-  KLineLongPressInfoPainter(this.klineData, this.beginIdx, this.longPressOffset,
-      [this.infoStyle = const KLineInfoStyle()])
-      : _priceFormatter = KLineController.shared.priceFormatter,
-        _volumeFormatter = KLineController.shared.volumeFormatter;
+  KLineLongPressInfoPainter(
+    this.klineData,
+    this.beginIdx,
+    this.longPressOffset, {
+    KLineController? controller,
+    this.infoStyle = const KLineInfoStyle(),
+  })  : controller = controller ?? KLineController.shared,
+        _priceFormatter = (controller ?? KLineController.shared).priceFormatter,
+        _volumeFormatter =
+            (controller ?? KLineController.shared).volumeFormatter;
 
   @override
   void paint(Canvas canvas, Size size) {
-    double leftPadding = KLineController.shared.infoWidgetPadding.left;
-    double topPadding = KLineController.shared.infoWidgetPadding.top;
+    double leftPadding = controller.infoWidgetPadding.left;
+    double topPadding = controller.infoWidgetPadding.top;
     double fontHeight = 14;
 
     drawText(
@@ -76,7 +94,6 @@ class KLineLongPressInfoPainter extends CustomPainter {
         Offset(leftPadding, topPadding),
         size,
         width: size.width);
-    final controller = KLineController.shared;
     drawText(canvas, 'high:${controller.formatPrice(klineData.high)}',
         Offset(leftPadding, topPadding + fontHeight * 2), size);
     drawText(canvas, 'open:${controller.formatPrice(klineData.open)}',

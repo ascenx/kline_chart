@@ -1,6 +1,9 @@
 # Style API
 
-`KLineController.shared` exposes grouped style objects for chart appearance. Set these values before rebuilding `KLineView`.
+`KLineController.shared` exposes grouped style objects for chart appearance.
+You can also style an independent `KLineController()` instance and pass it to
+`KLineView(controller: controller)`. Set style values before rebuilding
+`KLineView`.
 
 ```dart
 final controller = KLineController.shared;

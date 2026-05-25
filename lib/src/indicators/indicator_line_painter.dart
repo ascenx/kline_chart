@@ -30,17 +30,19 @@ class IndicatorLinePainter {
       List<KLineData> debugData = const [],
       int? selectedIndex,
       int? leadingItemCount,
-      bool showInfo = true}) {
+      bool showInfo = true,
+      KLineController? controller}) {
     if (periods.isEmpty) return;
+    final resolvedController = controller ?? KLineController.shared;
     if (lineColors.isEmpty) {
-      lineColors = KLineController.shared.indicatorColors;
+      lineColors = resolvedController.indicatorColors;
     }
 
     double width = size.width;
 
-    final controller = KLineController.shared;
-    double spacing = controller.spacing;
-    double itemW = KLineController.getItemWidth(width);
+    double spacing = resolvedController.spacing;
+    double itemW =
+        KLineController.getItemWidth(width, controller: resolvedController);
 
     double valueOffset = maxValue - minValue;
     double indicatorX = -(spacing + itemW * 0.5);
@@ -78,9 +80,9 @@ class IndicatorLinePainter {
               ? drawAreaHeight * 0.5 + top
               : drawAreaHeight * (1 - (value - minValue) / valueOffset) + top;
           if (type.isMain) {
-            indicatorY += controller.mainIndicatorInfoMargin;
+            indicatorY += resolvedController.mainIndicatorInfoMargin;
           }
-          indicatorY += controller.indicatorInfoHeight;
+          indicatorY += resolvedController.indicatorInfoHeight;
 
           indicatorX = (index - effectiveLeadingItemCount) * (itemW + spacing) +
               itemW * 0.5 +
@@ -101,13 +103,14 @@ class IndicatorLinePainter {
     }
 
     // line debug area
-    if (controller.isDebug) {
-      double originY = top + controller.indicatorInfoHeight;
-      if (type.isMain && controller.showMainIndicators.isNotEmpty) {
-        originY += controller.mainIndicatorInfoMargin;
+    if (resolvedController.isDebug) {
+      double originY = top + resolvedController.indicatorInfoHeight;
+      if (type.isMain && resolvedController.showMainIndicators.isNotEmpty) {
+        originY += resolvedController.mainIndicatorInfoMargin;
       }
       Rect rect = Rect.fromLTWH(0, originY, size.width, drawAreaHeight);
-      controller.drawDebugRect(canvas, rect, Colors.green.withAlpha(50));
+      resolvedController.drawDebugRect(
+          canvas, rect, Colors.green.withAlpha(50));
     }
 
     if (showInfo) {
@@ -115,7 +118,8 @@ class IndicatorLinePainter {
           lineColors: lineColors,
           topOffset: infoTopOffset,
           selectedIndex: selectedIndex,
-          leadingItemCount: leadingItemCount);
+          leadingItemCount: leadingItemCount,
+          controller: resolvedController);
     }
   }
 
@@ -132,16 +136,17 @@ class IndicatorLinePainter {
 
   static String infoValueText(
       IndicatorType type, List<double> values, int? selectedIndex,
-      {int? leadingItemCount, int? period}) {
+      {int? leadingItemCount, int? period, KLineController? controller}) {
     double? value = infoValue(type, values, selectedIndex,
         leadingItemCount: leadingItemCount);
     if (value == null) {
       return 'NaN';
     }
     if (type == IndicatorType.maVol) {
-      return KLineController.shared.formatVolume(value);
+      return (controller ?? KLineController.shared).formatVolume(value);
     }
-    return KLineController.shared.formatIndicator(value, type, period: period);
+    return (controller ?? KLineController.shared)
+        .formatIndicator(value, type, period: period);
   }
 
   static double? infoValue(
@@ -179,13 +184,15 @@ class IndicatorLinePainter {
 
   static List<String> indicatorInfoList(IndicatorType type,
       List<List<double>> dataList, List<int> periods, int? selectedIndex,
-      {int? leadingItemCount}) {
+      {int? leadingItemCount, KLineController? controller}) {
     List<String> infoList = [];
     for (int idx = 0; idx < periods.length; ++idx) {
       List<double> values = idx < dataList.length ? dataList[idx] : [];
       int period = periods[idx];
       String valueText = infoValueText(type, values, selectedIndex,
-          leadingItemCount: leadingItemCount, period: period);
+          leadingItemCount: leadingItemCount,
+          period: period,
+          controller: controller);
 
       if (type == IndicatorType.kdj) {
         if (periods.length < 3) {
@@ -215,26 +222,32 @@ class IndicatorLinePainter {
       {List<Color> lineColors = const [],
       double topOffset = 0.0,
       int? selectedIndex,
-      int? leadingItemCount}) {
+      int? leadingItemCount,
+      KLineController? controller}) {
     if (periods.isEmpty) return;
+    final resolvedController = controller ?? KLineController.shared;
     if (lineColors.isEmpty) {
-      lineColors = KLineController.shared.indicatorColors;
+      lineColors = resolvedController.indicatorColors;
     }
     showIndicatorInfo(
       canvas,
       size,
       type,
       indicatorInfoList(type, dataList, periods, selectedIndex,
-          leadingItemCount: leadingItemCount),
+          leadingItemCount: leadingItemCount, controller: resolvedController),
       top,
       lineColors: lineColors,
       topOffset: topOffset,
+      controller: resolvedController,
     );
   }
 
   static void showIndicatorInfo(Canvas canvas, Size size, IndicatorType type,
       List<String> infoList, double top,
-      {List<Color> lineColors = const [], double topOffset = 0.0}) {
+      {List<Color> lineColors = const [],
+      double topOffset = 0.0,
+      KLineController? controller}) {
+    final resolvedController = controller ?? KLineController.shared;
     final painter = _infoTextPainter;
 
     double lastWidth = 0.0;
@@ -265,12 +278,11 @@ class IndicatorLinePainter {
       lastWidth += painter.width;
     }
 
-    if (KLineController.shared.isDebug) {
+    if (resolvedController.isDebug) {
       double originY = top + topOffset;
-      double rectH = KLineController.shared.indicatorInfoHeight;
+      double rectH = resolvedController.indicatorInfoHeight;
       Rect rect = Rect.fromLTWH(0, originY, size.width, rectH);
-      KLineController.shared
-          .drawDebugRect(canvas, rect, Colors.blue.withAlpha(50));
+      resolvedController.drawDebugRect(canvas, rect, Colors.blue.withAlpha(50));
     }
   }
 }

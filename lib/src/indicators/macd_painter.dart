@@ -61,6 +61,7 @@ class MACDPainter {
     int? selectedIndex,
     int leadingItemCount = 0,
     bool showInfo = true,
+    KLineController? controller,
   }) {
     paintData(
       canvas,
@@ -76,6 +77,7 @@ class MACDPainter {
       selectedIndex: selectedIndex,
       leadingItemCount: leadingItemCount,
       showInfo: showInfo,
+      controller: controller,
     );
   }
 
@@ -93,22 +95,25 @@ class MACDPainter {
     int? selectedIndex,
     int leadingItemCount = 0,
     bool showInfo = true,
+    KLineController? controller,
   }) {
     if (dataList.length < 3 || periods.length != 3) return;
     if (dataList[0].isEmpty || dataList[1].isEmpty || dataList[2].isEmpty) {
       return;
     }
+    final resolvedController = controller ?? KLineController.shared;
     if (lineColors.isEmpty) {
-      lineColors = KLineController.shared.indicatorColors;
+      lineColors = resolvedController.indicatorColors;
     }
     Color macdColor = _lineColor(lineColors, 0, Colors.orange);
     Color signalColor = _lineColor(lineColors, 1, Colors.purple);
 
-    double spacing = KLineController.shared.spacing;
-    double itemW = KLineController.getItemWidth(size.width);
+    double spacing = resolvedController.spacing;
+    double itemW = KLineController.getItemWidth(size.width,
+        controller: resolvedController);
     double itemExtent = itemW + spacing;
     double valueOffset = maxValue - minValue;
-    double contentTop = top + KLineController.shared.indicatorInfoHeight;
+    double contentTop = top + resolvedController.indicatorInfoHeight;
     double zeroY = _valueToY(
       0.0,
       drawAreaHeight,
@@ -131,7 +136,9 @@ class MACDPainter {
         leadingItemCount: leadingItemCount);
     if (showInfo) {
       paintInfoForData(canvas, size, dataList, periods, top,
-          lineColors: lineColors, selectedIndex: selectedIndex);
+          controller: resolvedController,
+          lineColors: lineColors,
+          selectedIndex: selectedIndex);
     }
   }
 
@@ -285,6 +292,7 @@ class MACDPainter {
     double top, {
     List<Color> lineColors = const [],
     int? selectedIndex,
+    KLineController? controller,
   }) {
     paintInfoForData(
       canvas,
@@ -292,6 +300,7 @@ class MACDPainter {
       dataList,
       periods,
       top,
+      controller: controller,
       lineColors: lineColors,
       selectedIndex: selectedIndex,
     );
@@ -305,19 +314,21 @@ class MACDPainter {
     double top, {
     List<Color> lineColors = const [],
     int? selectedIndex,
+    KLineController? controller,
   }) {
     if (dataList.length < 3 || periods.length != 3) return;
+    final resolvedController = controller ?? KLineController.shared;
     if (lineColors.isEmpty) {
-      lineColors = KLineController.shared.indicatorColors;
+      lineColors = resolvedController.indicatorColors;
     }
     Color macdColor = _lineColor(lineColors, 0, Colors.orange);
     Color signalColor = _lineColor(lineColors, 1, Colors.purple);
     double? histogramValue = infoValue(dataList[2], selectedIndex);
     List<String> infoList = [
       'MACD(${periods[0]},${periods[1]},${periods[2]})',
-      'DIF: ${infoValueText(dataList[0], selectedIndex, period: periods[0])}',
-      'DEA: ${infoValueText(dataList[1], selectedIndex, period: periods[2])}',
-      'MACD: ${infoValueText(dataList[2], selectedIndex)}',
+      'DIF: ${infoValueText(dataList[0], selectedIndex, period: periods[0], controller: resolvedController)}',
+      'DEA: ${infoValueText(dataList[1], selectedIndex, period: periods[2], controller: resolvedController)}',
+      'MACD: ${infoValueText(dataList[2], selectedIndex, controller: resolvedController)}',
     ];
     List<Color> colors = [
       const Color(0xff666666),
@@ -358,11 +369,11 @@ class MACDPainter {
   bool _isInvalidValue(double value) => value == -1.0;
 
   static String infoValueText(List<double> values, int? selectedIndex,
-      {int? period}) {
+      {int? period, KLineController? controller}) {
     double? value = infoValue(values, selectedIndex);
     return value == null
         ? 'NaN'
-        : KLineController.shared
+        : (controller ?? KLineController.shared)
             .formatIndicator(value, IndicatorType.macd, period: period);
   }
 

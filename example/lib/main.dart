@@ -1,8 +1,7 @@
-import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:kline_chart/kline_chart.dart';
+import 'demo_data.dart';
+import 'multi_controller_demo_page.dart';
 
 void main() {
   runApp(const MyApp());
@@ -40,7 +39,7 @@ class _MyHomePageState extends State<MyHomePage> {
   initState() {
     super.initState();
 
-    _loadJson().then((jsonData) {
+    loadDemoKLineData().then((jsonData) {
       KLineController.shared.data = jsonData;
       setState(() {});
     });
@@ -91,24 +90,6 @@ class _MyHomePageState extends State<MyHomePage> {
     setState(() {});
   }
 
-  Future<List<KLineData>> _loadJson() async {
-    final jsonStr = await rootBundle.loadString('lib/binance_btc_month.json');
-    List jsonList = json.decode(jsonStr);
-    List<KLineData> dataList = [];
-    for (var data in jsonList) {
-      var klineData = KLineData()
-        ..open = double.parse(data[1] ?? '0')
-        ..high = double.parse(data[2] ?? '0')
-        ..low = double.parse(data[3] ?? '0')
-        ..close = double.parse(data[4] ?? '0')
-        ..volume = double.parse(data[5] ?? '0')
-        ..time = data[6] ?? 0;
-
-      dataList.add(klineData);
-    }
-    return dataList;
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -118,6 +99,34 @@ class _MyHomePageState extends State<MyHomePage> {
         body: Center(
             child: Column(
           children: [
+            Container(
+              alignment: Alignment.centerRight,
+              height: 48,
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: InkWell(
+                key: const Key('multi_controller_demo_button'),
+                onTap: () {
+                  Navigator.of(context).push(MaterialPageRoute(
+                    builder: (context) => const MultiControllerDemoPage(),
+                  ));
+                },
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Multi Controller Demo',
+                      style: TextStyle(fontSize: 14, color: Colors.blue),
+                    ),
+                    SizedBox(width: 4),
+                    Icon(
+                      Icons.chevron_right,
+                      size: 20,
+                      color: Colors.blue,
+                    ),
+                  ],
+                ),
+              ),
+            ),
             Container(
                 height: 50,
                 padding: const EdgeInsets.symmetric(horizontal: 20),

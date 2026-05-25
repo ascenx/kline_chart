@@ -8,12 +8,18 @@ import './kline_data.dart';
 class KlineLongPressWidget extends StatelessWidget {
   final List<KLineData> klineData;
   final double beginIdx;
+  final KLineController controller;
 
-  const KlineLongPressWidget(this.klineData, this.beginIdx, {super.key});
+  KlineLongPressWidget(
+    this.klineData,
+    this.beginIdx, {
+    super.key,
+    KLineController? controller,
+  }) : controller = controller ?? KLineController.shared;
 
   Offset _convertToItemOffset(Offset offset) {
-    double itemW = KLineController.shared.itemWidth;
-    double spacing = KLineController.shared.spacing;
+    double itemW = controller.itemWidth;
+    double spacing = controller.spacing;
     int index = KLineController.dataIndexForLocalX(
       localX: offset.dx,
       beginIndex: beginIdx,
@@ -33,15 +39,19 @@ class KlineLongPressWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<Offset>(
-        valueListenable: KLineController.shared.longPressOffset,
+        valueListenable: controller.longPressOffset,
         builder: (ctx, offset, child) {
           if (offset == Offset.zero) {
             return const SizedBox.shrink();
           }
           Offset itemOffset = _convertToItemOffset(offset);
           return CustomPaint(
-            foregroundPainter:
-                KLineLongPressPainter(klineData, beginIdx, itemOffset),
+            foregroundPainter: KLineLongPressPainter(
+              klineData,
+              beginIdx,
+              itemOffset,
+              controller: controller,
+            ),
           );
         });
   }
@@ -56,8 +66,12 @@ class KLineLongPressPainter extends CustomPainter {
   var longPressOffset = Offset.zero;
   final KLineCrosshairStyle _style;
 
-  KLineLongPressPainter(this.klineData, this.beginIdx, this.longPressOffset)
-      : _style = KLineController.shared.crosshairStyle;
+  KLineLongPressPainter(
+    this.klineData,
+    this.beginIdx,
+    this.longPressOffset, {
+    KLineController? controller,
+  }) : _style = (controller ?? KLineController.shared).crosshairStyle;
 
   final _linePaint = Paint()
     ..style = PaintingStyle.stroke

@@ -11,14 +11,15 @@ class IndicatorDataHandler {
     return max(0, _visibleStart(beginIdx) - 1);
   }
 
-  static int _visibleEnd(List<KLineData> klineData, double beginIdx) {
-    double itemCount = KLineController.shared.itemCount;
+  static int _visibleEnd(List<KLineData> klineData, double beginIdx,
+      {KLineController? controller}) {
+    double itemCount = (controller ?? KLineController.shared).itemCount;
     return min(klineData.length, (beginIdx + itemCount).ceil());
   }
 
   static IndicatorResult ma(
       List<KLineData> klineData, List<int> periods, double beginIdx,
-      {bool isVol = false}) {
+      {bool isVol = false, KLineController? controller}) {
     if (klineData.isEmpty || periods.isEmpty) {
       return IndicatorResult.empty;
     }
@@ -26,7 +27,7 @@ class IndicatorDataHandler {
     List<List<double>> maData = [];
     double max = 0.0;
     double min = 0.0;
-    double itemCount = KLineController.shared.itemCount;
+    double itemCount = (controller ?? KLineController.shared).itemCount;
 
     for (int i = 0; i < periods.length; ++i) {
       List<double> maList = [];
@@ -68,7 +69,8 @@ class IndicatorDataHandler {
   }
 
   static IndicatorResult ema(
-      List<KLineData> klineData, List<int> periods, double beginIdx) {
+      List<KLineData> klineData, List<int> periods, double beginIdx,
+      {KLineController? controller}) {
     if (klineData.isEmpty) {
       return IndicatorResult.empty;
     }
@@ -77,7 +79,7 @@ class IndicatorDataHandler {
     double max = 0.0;
     double min = 0.0;
     int dataStart = _visibleDataStart(beginIdx);
-    int visibleEnd = _visibleEnd(klineData, beginIdx);
+    int visibleEnd = _visibleEnd(klineData, beginIdx, controller: controller);
 
     for (var i = 0; i < periods.length; ++i) {
       List<double> emaList = [];
@@ -129,7 +131,8 @@ class IndicatorDataHandler {
   }
 
   static IndicatorResult boll(
-      List<KLineData> klineData, int period, int bandwidth, double beginIdx) {
+      List<KLineData> klineData, int period, int bandwidth, double beginIdx,
+      {KLineController? controller}) {
     if (klineData.isEmpty || period < 0 || bandwidth < 0) {
       return IndicatorResult.empty;
     }
@@ -142,7 +145,7 @@ class IndicatorDataHandler {
     List<double> dnList = [];
 
     final visibleStart = _visibleDataStart(beginIdx);
-    final visibleEnd = _visibleEnd(klineData, beginIdx);
+    final visibleEnd = _visibleEnd(klineData, beginIdx, controller: controller);
 
     for (int i = visibleStart; i < visibleEnd; i++) {
       if (i < period - 1) {
@@ -186,21 +189,23 @@ class IndicatorDataHandler {
     return IndicatorResult([mbList, upList, dnList], maxValue, minValue);
   }
 
-  static IndicatorResult sar(List<KLineData> klineData, double beginIdx) {
+  static IndicatorResult sar(List<KLineData> klineData, double beginIdx,
+      {KLineController? controller}) {
     if (klineData.length < 2) {
       return IndicatorResult.empty;
     }
 
-    final controller = KLineController.shared;
-    final startAf = controller.sarStart;
-    final incrementAf = controller.sarIncrement;
-    final maxAf = controller.sarMax;
+    final resolvedController = controller ?? KLineController.shared;
+    final startAf = resolvedController.sarStart;
+    final incrementAf = resolvedController.sarIncrement;
+    final maxAf = resolvedController.sarMax;
     if (startAf <= 0 || incrementAf <= 0 || maxAf <= 0) {
       return IndicatorResult.empty;
     }
 
     final visibleStart = _visibleStart(beginIdx);
-    final visibleEnd = _visibleEnd(klineData, beginIdx);
+    final visibleEnd =
+        _visibleEnd(klineData, beginIdx, controller: resolvedController);
     final visibleValues = <double>[];
     bool isRising = klineData[1].close >= klineData[0].close;
     double sar = isRising
@@ -278,7 +283,8 @@ class IndicatorDataHandler {
   }
 
   static IndicatorResult macd(
-      List<KLineData> klineData, List<int> periods, double beginIdx) {
+      List<KLineData> klineData, List<int> periods, double beginIdx,
+      {KLineController? controller}) {
     if (klineData.isEmpty ||
         periods.length != 3 ||
         periods.any((period) => period <= 0)) {
@@ -297,7 +303,7 @@ class IndicatorDataHandler {
     List<double> visibleHistogram = [];
     int visibleStart = _visibleStart(beginIdx);
     int dataStart = visibleStart - min(2, visibleStart);
-    int visibleEnd = _visibleEnd(klineData, beginIdx);
+    int visibleEnd = _visibleEnd(klineData, beginIdx, controller: controller);
 
     double? fastEma;
     double? slowEma;
@@ -370,7 +376,8 @@ class IndicatorDataHandler {
   }
 
   static IndicatorResult kdj(
-      List<KLineData> klineData, List<int> periods, double beginIdx) {
+      List<KLineData> klineData, List<int> periods, double beginIdx,
+      {KLineController? controller}) {
     if (klineData.isEmpty || periods.length != 3) {
       return IndicatorResult.empty;
     }
@@ -384,12 +391,12 @@ class IndicatorDataHandler {
     double maxValue = 0.0;
     double minValue = 0.0;
 
-    double itemCount = KLineController.shared.itemCount;
+    double itemCount = (controller ?? KLineController.shared).itemCount;
 
     double lastK = 0.0, lastD = 0.0;
     final visibleStart = _visibleStart(beginIdx);
     final dataStart = _visibleDataStart(beginIdx);
-    final visibleEnd = _visibleEnd(klineData, beginIdx);
+    final visibleEnd = _visibleEnd(klineData, beginIdx, controller: controller);
     for (int i = 0; i < visibleEnd; i++) {
       KLineData data = klineData[i];
       if (i == 0) {
@@ -461,7 +468,8 @@ class IndicatorDataHandler {
   }
 
   static IndicatorResult rsi(
-      List<KLineData> klineData, List<int> periods, double beginIdx) {
+      List<KLineData> klineData, List<int> periods, double beginIdx,
+      {KLineController? controller}) {
     if (klineData.isEmpty || periods.isEmpty) {
       return IndicatorResult.empty;
     }
@@ -472,7 +480,7 @@ class IndicatorDataHandler {
     bool hasVisibleValue = false;
     bool hasValidPeriod = false;
     int visibleStart = _visibleDataStart(beginIdx);
-    int visibleEnd = _visibleEnd(klineData, beginIdx);
+    int visibleEnd = _visibleEnd(klineData, beginIdx, controller: controller);
 
     for (var idx = 0; idx < periods.length; ++idx) {
       int period = periods[idx];
@@ -568,7 +576,8 @@ class IndicatorDataHandler {
   }
 
   static IndicatorResult wr(
-      List<KLineData> klineData, List<int> periods, double beginIdx) {
+      List<KLineData> klineData, List<int> periods, double beginIdx,
+      {KLineController? controller}) {
     if (klineData.isEmpty || periods.isEmpty) {
       return IndicatorResult.empty;
     }
@@ -579,7 +588,7 @@ class IndicatorDataHandler {
       int period = periods[idx];
       List<double> wrList = [];
 
-      int endIndex = _visibleEnd(klineData, beginIdx);
+      int endIndex = _visibleEnd(klineData, beginIdx, controller: controller);
       for (int i = dataStart; i < endIndex; ++i) {
         final dataIndex = i;
         if (dataIndex >= klineData.length) break;
@@ -617,12 +626,13 @@ class IndicatorDataHandler {
     return IndicatorResult(dataList, max, min);
   }
 
-  static IndicatorResult obv(List<KLineData> klineData, double beginIdx) {
+  static IndicatorResult obv(List<KLineData> klineData, double beginIdx,
+      {KLineController? controller}) {
     List<double> obvValues = [];
     double obv = 0.0;
     double prevClose = 0.0;
 
-    double itemCount = KLineController.shared.itemCount;
+    double itemCount = (controller ?? KLineController.shared).itemCount;
     int dataStart = _visibleDataStart(beginIdx);
     double endIndex = beginIdx + itemCount;
     endIndex = endIndex < klineData.length

@@ -159,7 +159,8 @@ final data = KLineData.fromJson({
 
 ## Render KLineView
 
-`KLineView` is the chart widget. It reads data and configuration from `KLineController.shared`.
+`KLineView` is the chart widget. By default it reads data and configuration
+from `KLineController.shared`.
 
 ```dart
 SizedBox(
@@ -172,9 +173,25 @@ Give `KLineView` a clear height through `SizedBox`, `Container`, `Expanded`, or 
 
 When `KLineController.shared.data` is empty, `KLineView` shows a loading indicator. After data is assigned, the hosting page should rebuild.
 
+To render an independent chart, pass a controller instance:
+
+```dart
+final controller = KLineController()
+  ..data = dataList
+  ..showMainIndicators = [IndicatorType.boll]
+  ..showSubIndicators = [IndicatorType.vol, IndicatorType.macd];
+
+SizedBox(
+  height: 400,
+  child: KLineView(controller: controller),
+)
+```
+
 ## Global Controller
 
-`KLineController.shared` is the central configuration entry point. It stores chart data, indicators, styles, formatters, layout options, and interaction state.
+`KLineController.shared` is the default shared configuration entry point. It
+stores chart data, indicators, styles, formatters, layout options, and
+interaction state for `KLineView()` when no controller is passed.
 
 ```dart
 final controller = KLineController.shared;
@@ -185,7 +202,7 @@ controller.showMainIndicators = [IndicatorType.ma];
 controller.showSubIndicators = [IndicatorType.vol, IndicatorType.macd];
 ```
 
-The constructor returns the same singleton:
+`KLineController()` creates an independent controller instance:
 
 ```dart
 final controller = KLineController();
@@ -193,9 +210,11 @@ final controller = KLineController();
 
 Notes:
 
-- The controller is a singleton, which works best for a page with one primary K-line chart.
+- `KLineView()` uses `KLineController.shared`.
+- `KLineView(controller: controller)` uses the provided controller.
+- `KLineController()` is appropriate when each chart needs separate data, indicators, style, formatters, scroll state, and long-press state.
 - After changing `data` or configuration, trigger your state management rebuild if the page does not rebuild automatically.
-- Multiple `KLineView` instances on the same page share the same `KLineController.shared` configuration.
+- Multiple `KLineView()` instances without a controller still share `KLineController.shared`.
 
 ## Main And Sub Indicators
 
@@ -870,7 +889,11 @@ setState(() {});
 
 ### Why do multiple charts affect each other's configuration?
 
-`KLineController` is currently a singleton. Multiple `KLineView` instances share the same configuration, so manage shared state carefully if you render more than one chart on the same page.
+Multiple `KLineView()` instances without an explicit controller use `KLineController.shared`. Pass a separate controller to each chart when they need independent state:
+
+```dart
+KLineView(controller: KLineController()..data = dataList)
+```
 
 ### Why is there blank space to the right of the latest candle?
 

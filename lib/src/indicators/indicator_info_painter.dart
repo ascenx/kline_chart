@@ -12,21 +12,25 @@ import '../kline_painter.dart';
 class KLineIndicatorInfoPainter extends CustomPainter {
   final List<KLineData> klineData;
   final double beginIdx;
+  final KLineController controller;
   final _IndicatorInfoConfig _config;
   final KLineIndicatorDataCache _indicatorDataCache;
 
   KLineIndicatorInfoPainter(this.klineData, this.beginIdx,
-      {KLineIndicatorDataCache? indicatorDataCache})
-      : _config = _IndicatorInfoConfig.fromController(KLineController.shared),
-        _indicatorDataCache =
-            indicatorDataCache ?? KLineIndicatorDataCache(klineData, beginIdx),
-        super(repaint: KLineController.shared.longPressOffset);
+      {KLineController? controller,
+      KLineIndicatorDataCache? indicatorDataCache})
+      : controller = controller ?? KLineController.shared,
+        _config = _IndicatorInfoConfig.fromController(
+            controller ?? KLineController.shared),
+        _indicatorDataCache = indicatorDataCache ??
+            KLineIndicatorDataCache(klineData, beginIdx,
+                controller: controller ?? KLineController.shared),
+        super(repaint: (controller ?? KLineController.shared).longPressOffset);
 
   @override
   void paint(Canvas canvas, Size size) {
     if (klineData.isEmpty) return;
 
-    final controller = KLineController.shared;
     final spacing = _config.spacing;
     final itemW = size.width / _config.itemCount - spacing;
     final selectedIndex = KLinePainter.selectedVisibleIndexForLongPress(
@@ -61,6 +65,7 @@ class KLineIndicatorInfoPainter extends CustomPainter {
         result.data,
         periods,
         _config.klineTop,
+        controller: controller,
         selectedIndex: selectedIndex,
         leadingItemCount: leadingItemCount,
       );
@@ -77,6 +82,7 @@ class KLineIndicatorInfoPainter extends CustomPainter {
         result.data,
         periods,
         _config.klineTop,
+        controller: controller,
         selectedIndex: selectedIndex,
         leadingItemCount:
             KLinePainter.leadingLineDataCountForBeginIndex(beginIdx),
@@ -93,6 +99,7 @@ class KLineIndicatorInfoPainter extends CustomPainter {
         result.data,
         const [0],
         _config.klineTop,
+        controller: controller,
         lineColors: [_config.sarColor],
         selectedIndex: selectedIndex,
       );
@@ -122,6 +129,7 @@ class KLineIndicatorInfoPainter extends CustomPainter {
           result.data,
           periods,
           subTop,
+          controller: controller,
           selectedIndex: selectedIndex,
           leadingItemCount: 1,
         );
@@ -135,6 +143,7 @@ class KLineIndicatorInfoPainter extends CustomPainter {
           result.data,
           _indicatorDataCache.periodsFor(type),
           subTop,
+          controller: controller,
           lineColors: _config.indicatorColors,
           selectedIndex:
               selectedIndex == null ? null : selectedIndex + leadingDataCount,
@@ -148,6 +157,7 @@ class KLineIndicatorInfoPainter extends CustomPainter {
           result,
           _indicatorDataCache.periodsFor(type),
           subTop,
+          controller: controller,
           lineColors: _config.indicatorColors,
           selectedIndex: selectedIndex,
           leadingItemCount:

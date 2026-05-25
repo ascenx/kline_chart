@@ -15,6 +15,7 @@ import './kline_data.dart';
 class KLinePainter extends CustomPainter {
   final List<KLineData> klineData;
   final double beginIdx;
+  final KLineController controller;
   final KLineChartStyle _chartStyle;
   final KLineCandleStyle _candleStyle;
   final KLineVolumeStyle _volumeStyle;
@@ -26,18 +27,23 @@ class KLinePainter extends CustomPainter {
   final KLineIndicatorDataCache _indicatorDataCache;
 
   KLinePainter(this.klineData, this.beginIdx,
-      {KLineIndicatorDataCache? indicatorDataCache})
-      : _chartStyle = KLineController.shared.chartStyle,
-        _candleStyle = KLineController.shared.candleStyle,
-        _volumeStyle = KLineController.shared.volumeStyle,
-        _priceFormatter = KLineController.shared.priceFormatter,
-        _volumeFormatter = KLineController.shared.volumeFormatter,
-        _indicatorFormatter = KLineController.shared.indicatorFormatter,
-        _indicatorColors =
-            List<Color>.of(KLineController.shared.indicatorColors),
-        _sarColor = KLineController.shared.sarColor,
-        _indicatorDataCache =
-            indicatorDataCache ?? KLineIndicatorDataCache(klineData, beginIdx);
+      {KLineController? controller,
+      KLineIndicatorDataCache? indicatorDataCache})
+      : controller = controller ?? KLineController.shared,
+        _chartStyle = (controller ?? KLineController.shared).chartStyle,
+        _candleStyle = (controller ?? KLineController.shared).candleStyle,
+        _volumeStyle = (controller ?? KLineController.shared).volumeStyle,
+        _priceFormatter = (controller ?? KLineController.shared).priceFormatter,
+        _volumeFormatter =
+            (controller ?? KLineController.shared).volumeFormatter,
+        _indicatorFormatter =
+            (controller ?? KLineController.shared).indicatorFormatter,
+        _indicatorColors = List<Color>.of(
+            (controller ?? KLineController.shared).indicatorColors),
+        _sarColor = (controller ?? KLineController.shared).sarColor,
+        _indicatorDataCache = indicatorDataCache ??
+            KLineIndicatorDataCache(klineData, beginIdx,
+                controller: controller ?? KLineController.shared);
 
   final _riseRectPaint = Paint()
     ..style = PaintingStyle.fill
@@ -126,26 +132,26 @@ class KLinePainter extends CustomPainter {
 
     // debugPrint('debug: kline painter repaint');
 
-    bool isTimeChart = KLineController.shared.showTimeChart;
+    bool isTimeChart = controller.showTimeChart;
 
-    final showSubIndicators = KLineController.shared.showSubIndicators;
+    final showSubIndicators = controller.showSubIndicators;
     int subIndicatorCount = showSubIndicators.length;
 
-    double spacing = KLineController.shared.spacing;
-    double itemW = KLineController.getItemWidth(size.width);
-    double itemCount = KLineController.shared.itemCount;
+    double spacing = controller.spacing;
+    double itemW =
+        KLineController.getItemWidth(size.width, controller: controller);
+    double itemCount = controller.itemCount;
 
-    double mainTopMargin = KLineController.shared.klineMargin.top;
-    double mainInfoMargin = KLineController.shared.mainIndicatorInfoMargin;
+    double mainTopMargin = controller.klineMargin.top;
+    double mainInfoMargin = controller.mainIndicatorInfoMargin;
 
-    double indicatorInfoHeight = KLineController.shared.indicatorInfoHeight;
-    double indicatorSpacing = KLineController.shared.indicatorSpacing;
+    double indicatorInfoHeight = controller.indicatorInfoHeight;
+    double indicatorSpacing = controller.indicatorSpacing;
 
     // main draw area height
     double mainHeight = size.height -
-        (KLineController.shared.subIndicatorHeight + indicatorSpacing) *
-            subIndicatorCount -
-        KLineController.shared.klineMargin.bottom;
+        (controller.subIndicatorHeight + indicatorSpacing) * subIndicatorCount -
+        controller.klineMargin.bottom;
 
     _timeLineAreaPaint.shader = ui.Gradient.linear(
       const Offset(0, 0),
@@ -156,7 +162,7 @@ class KLinePainter extends CustomPainter {
       ],
     );
 
-    if (KLineController.shared.showMainIndicators.isNotEmpty) {
+    if (controller.showMainIndicators.isNotEmpty) {
       mainTopMargin += (indicatorInfoHeight + mainInfoMargin);
     }
     mainHeight -= mainTopMargin;
@@ -206,10 +212,8 @@ class KLinePainter extends CustomPainter {
 
     List<List<double>> mainIndicatorData = [];
     List<List<double>> sarIndicatorData = [];
-    bool isShowMA =
-        KLineController.shared.showMainIndicators.contains(IndicatorType.ma);
-    bool isShowEMA =
-        KLineController.shared.showMainIndicators.contains(IndicatorType.ema);
+    bool isShowMA = controller.showMainIndicators.contains(IndicatorType.ma);
+    bool isShowEMA = controller.showMainIndicators.contains(IndicatorType.ema);
     if (isShowMA || isShowEMA) {
       var res = IndicatorResult.empty;
       if (isShowMA) {
@@ -229,8 +233,7 @@ class KLinePainter extends CustomPainter {
       }
     }
 
-    bool isShowSAR =
-        KLineController.shared.showMainIndicators.contains(IndicatorType.sar);
+    bool isShowSAR = controller.showMainIndicators.contains(IndicatorType.sar);
     if (isShowSAR) {
       final res = _indicatorDataCache.result(IndicatorType.sar);
       sarIndicatorData = res.data;
@@ -246,7 +249,7 @@ class KLinePainter extends CustomPainter {
     }
 
     bool isShowBOLL =
-        KLineController.shared.showMainIndicators.contains(IndicatorType.boll);
+        controller.showMainIndicators.contains(IndicatorType.boll);
     if (isShowBOLL) {
       final res = _indicatorDataCache.result(IndicatorType.boll);
       mainIndicatorData = res.data;
@@ -265,7 +268,7 @@ class KLinePainter extends CustomPainter {
         canvas,
         mainHeight,
         size.width,
-        indicatorInfoHeight + KLineController.shared.mainIndicatorInfoMargin,
+        indicatorInfoHeight + controller.mainIndicatorInfoMargin,
         highest,
         lowest,
         size);
@@ -426,7 +429,6 @@ class KLinePainter extends CustomPainter {
       if (hasFallCandle) {
         canvas.drawPath(_fallCandleWickPath, _fallLinePaint);
       }
-      final controller = KLineController.shared;
       _drawHighestLowestText(canvas, controller.formatPrice(mainHighest),
           Offset(highestX, highestY), size);
       _drawHighestLowestText(canvas, controller.formatPrice(mainLowest),
@@ -447,7 +449,8 @@ class KLinePainter extends CustomPainter {
           slideOffset,
           highest,
           lowest,
-          top: KLineController.shared.klineMargin.top,
+          top: controller.klineMargin.top,
+          controller: controller,
           lineColors: _indicatorColors,
           leadingItemCount: isShowMA ? 1 : lineLeadingItemCount,
           showInfo: false,
@@ -461,14 +464,15 @@ class KLinePainter extends CustomPainter {
           canvas,
           size,
           mainHeight,
-          KLineController.shared.showMainIndicators.first,
+          controller.showMainIndicators.first,
           mainIndicatorData,
           bollPeriods,
           beginIdx,
           slideOffset,
           highest,
           lowest,
-          top: KLineController.shared.klineMargin.top,
+          top: controller.klineMargin.top,
+          controller: controller,
           lineColors: _indicatorColors,
           leadingItemCount: lineLeadingItemCount,
           showInfo: false);
@@ -483,13 +487,14 @@ class KLinePainter extends CustomPainter {
         slideOffset,
         highest,
         lowest,
-        top: KLineController.shared.klineMargin.top,
+        top: controller.klineMargin.top,
         pointColor: _sarColor,
+        controller: controller,
       );
     }
 
     // draw sub indicator
-    double indicatorH = KLineController.shared.subIndicatorHeight;
+    double indicatorH = controller.subIndicatorHeight;
 
     // if (KLineConfig.shared.showSubIndicators.contains(IndicatorType.macd)) {
     //   MACDPainter(klineData, beginIdx).paint(canvas, size, maxVolume);
@@ -511,19 +516,21 @@ class KLinePainter extends CustomPainter {
           subHighestValue, subLowestValue, size, type);
 
       if (type == IndicatorType.vol) {
-        VolPainter(klineData, beginIdx, indicatorDataCache: _indicatorDataCache)
+        VolPainter(klineData, beginIdx,
+                controller: controller, indicatorDataCache: _indicatorDataCache)
             .paint(canvas, size, maxVolume, slideOffset, showInfo: false);
       } else if (type == IndicatorType.macd) {
         _macdPainter.paintData(
             canvas,
             size,
             subIndicatorData[type] ?? [],
-            indicatorH - KLineController.shared.indicatorInfoHeight,
+            indicatorH - controller.indicatorInfoHeight,
             _indicatorDataCache.periodsFor(type),
             slideOffset,
             subHighestValue,
             subLowestValue,
             top: subTop,
+            controller: controller,
             lineColors: _indicatorColors,
             leadingItemCount: leadingDataCountForBeginIndex(beginIdx),
             showInfo: false);
@@ -533,7 +540,7 @@ class KLinePainter extends CustomPainter {
         IndicatorLinePainter.paint(
             canvas,
             size,
-            indicatorH - KLineController.shared.indicatorInfoHeight,
+            indicatorH - controller.indicatorInfoHeight,
             type,
             subIndicatorData[type],
             _indicatorDataCache.periodsFor(type),
@@ -542,6 +549,7 @@ class KLinePainter extends CustomPainter {
             subHighestValue,
             subLowestValue,
             top: subTop,
+            controller: controller,
             lineColors: _indicatorColors,
             leadingItemCount: lineLeadingItemCount,
             showInfo: false);
@@ -555,9 +563,7 @@ class KLinePainter extends CustomPainter {
         : (1 - (currentPrice - lowest) / (highest - lowest));
     currentPriceRate = currentPriceRate > 1 ? 1 : currentPriceRate;
     currentPriceRate = currentPriceRate < 0 ? 0 : currentPriceRate;
-    _drawCurrentPrice(
-        canvas,
-        KLineController.shared.formatCurrentPrice(currentPrice),
+    _drawCurrentPrice(canvas, controller.formatCurrentPrice(currentPrice),
         Offset(size.width - 56, currentPriceRate * mainHeight + mainTopMargin));
   }
 
@@ -610,13 +616,12 @@ class KLinePainter extends CustomPainter {
       double lowest,
       Size canvasSize,
       IndicatorType type) {
-    final controller = KLineController.shared;
     final formatValue = type == IndicatorType.vol
         ? controller.formatVolume
         : (double value) => controller.formatIndicator(value, type);
     // draw highest text
     _drawText(canvas, formatValue(highest),
-        Offset(width - 56, top + KLineController.shared.indicatorInfoHeight),
+        Offset(width - 56, top + controller.indicatorInfoHeight),
         width: 56);
 
     // draw lowest text
@@ -664,7 +669,7 @@ class KLinePainter extends CustomPainter {
   void _drawRulerLine(Canvas canvas, double height, double width, double top,
       double highestPrice, double lowestPrice, Size canvasSize) {
     double priceOffset = highestPrice - lowestPrice;
-    var ctr = KLineController.shared;
+    var ctr = controller;
     double scaleTop = ctr.mainIndicatorInfoMargin +
         ctr.indicatorInfoHeight +
         ctr.klineMargin.top;
@@ -682,8 +687,7 @@ class KLinePainter extends CustomPainter {
       // draw rule text
       _drawText(
           canvas,
-          KLineController.shared
-              .formatPrice(highestPrice - priceOffset * i / 4),
+          controller.formatPrice(highestPrice - priceOffset * i / 4),
           Offset(width - 56, scaleHeight * i / 4 + scaleTop - 12),
           width: 56);
     }

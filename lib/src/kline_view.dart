@@ -12,7 +12,10 @@ const double _scrollIndexTolerance = 0.000001;
 const double _scrollOffsetTolerance = 0.01;
 
 class KLineView extends StatefulWidget {
-  KLineView({super.key});
+  final KLineController controller;
+
+  KLineView({super.key, KLineController? controller})
+      : controller = controller ?? KLineController.shared;
 
   @override
   State<StatefulWidget> createState() => _KLineViewState();
@@ -47,20 +50,20 @@ class _KLineViewState extends State<KLineView> {
   }
 
   void _klineDidScroll(double offsetX) {
-    KLineController.shared.longPressOffset.update(Offset.zero);
-    double itemW = KLineController.shared.itemWidth;
-    double spacing = KLineController.shared.spacing;
+    final controller = widget.controller;
+    controller.longPressOffset.update(Offset.zero);
+    double itemW = controller.itemWidth;
+    double spacing = controller.spacing;
     double beginIdx = KLineController.beginIndexForScrollOffset(
       offset: offsetX,
       itemExtent: itemW + spacing,
-      itemCount: KLineController.shared.itemCount,
-      dataLength: KLineController.shared.data.length,
+      itemCount: controller.itemCount,
+      dataLength: controller.data.length,
       trailingBlankItemCount: max(
-        KLineController.shared.trailingBlankItemCount,
-        KLineController.shared.maxTrailingBlankItemCount,
+        controller.trailingBlankItemCount,
+        controller.maxTrailingBlankItemCount,
       ),
-      minTrailingVisibleItemCount:
-          KLineController.shared.minTrailingVisibleItemCount,
+      minTrailingVisibleItemCount: controller.minTrailingVisibleItemCount,
     );
     if ((_beginIdx - beginIdx).abs() < _scrollIndexTolerance) return;
     _beginIdx = beginIdx;
@@ -69,6 +72,7 @@ class _KLineViewState extends State<KLineView> {
 
   void _klineDidZoom(ScaleUpdateDetails details) {
     if (details.pointerCount != 2 || _viewportWidth <= 0) return;
+    final controller = widget.controller;
 
     final result = KLineController.zoomForScale(
       startBeginIndex: _zoomStartBeginIdx,
@@ -77,26 +81,25 @@ class _KLineViewState extends State<KLineView> {
       startFocalDx: _zoomStartFocalDx,
       currentFocalDx: details.localFocalPoint.dx,
       viewportWidth: _viewportWidth,
-      dataLength: KLineController.shared.data.length,
-      minItemCount: KLineController.shared.minCount,
-      maxItemCount: KLineController.shared.maxCount,
+      dataLength: controller.data.length,
+      minItemCount: controller.minCount,
+      maxItemCount: controller.maxCount,
       trailingBlankItemCount: max(
-        KLineController.shared.trailingBlankItemCount,
-        KLineController.shared.maxTrailingBlankItemCount,
+        controller.trailingBlankItemCount,
+        controller.maxTrailingBlankItemCount,
       ),
-      minTrailingVisibleItemCount:
-          KLineController.shared.minTrailingVisibleItemCount,
+      minTrailingVisibleItemCount: controller.minTrailingVisibleItemCount,
     );
 
     if ((_beginIdx - result.beginIndex).abs() < _scrollIndexTolerance &&
-        (KLineController.shared.itemCount - result.itemCount).abs() <
+        (controller.itemCount - result.itemCount).abs() <
             _scrollIndexTolerance) {
       return;
     }
 
     setState(() {
       _beginIdx = result.beginIndex;
-      KLineController.shared.itemCount = result.itemCount;
+      controller.itemCount = result.itemCount;
     });
     _syncScrollOffset(result.beginIndex, result.itemCount);
   }
@@ -128,12 +131,13 @@ class _KLineViewState extends State<KLineView> {
   }
 
   void _klineLongPress(Offset offset) {
-    KLineController.shared.longPressOffset.update(offset);
+    widget.controller.longPressOffset.update(offset);
   }
 
   @override
   Widget build(BuildContext context) {
-    int dataLength = KLineController.shared.data.length;
+    final controller = widget.controller;
+    int dataLength = controller.data.length;
     if (dataLength == 0) {
       return const Center(
           child: CircularProgressIndicator(
@@ -142,25 +146,27 @@ class _KLineViewState extends State<KLineView> {
       ));
     }
     return Container(
-        margin: KLineController.shared.klineMargin,
+        margin: controller.klineMargin,
+        decoration: BoxDecoration(),
+        clipBehavior: Clip.antiAlias,
         child: LayoutBuilder(builder: (ctx, constraints) {
           double containerW = constraints.maxWidth;
           double containerH = constraints.maxHeight;
           _viewportWidth = containerW;
 
-          double itemCount = KLineController.shared.itemCount;
-          double itemW = KLineController.getItemWidth(containerW);
-          double spacing = KLineController.shared.spacing;
+          double itemCount = controller.itemCount;
+          double itemW =
+              KLineController.getItemWidth(containerW, controller: controller);
+          double spacing = controller.spacing;
           double itemExtent = itemW + spacing;
           final scrollTrailingBlankItemCount =
               KLineController.effectiveTrailingBlankItemCountFor(
             itemCount: itemCount,
             trailingBlankItemCount: max(
-              KLineController.shared.trailingBlankItemCount,
-              KLineController.shared.maxTrailingBlankItemCount,
+              controller.trailingBlankItemCount,
+              controller.maxTrailingBlankItemCount,
             ),
-            minTrailingVisibleItemCount:
-                KLineController.shared.minTrailingVisibleItemCount,
+            minTrailingVisibleItemCount: controller.minTrailingVisibleItemCount,
           );
           // scroll size
           double contentSizeW =
@@ -171,25 +177,26 @@ class _KLineViewState extends State<KLineView> {
             _beginIdx = KLineController.maxBeginIndexFor(
               dataLength: dataLength,
               itemCount: itemCount,
-              trailingBlankItemCount:
-                  KLineController.shared.trailingBlankItemCount,
+              trailingBlankItemCount: controller.trailingBlankItemCount,
               minTrailingVisibleItemCount:
-                  KLineController.shared.minTrailingVisibleItemCount,
+                  controller.minTrailingVisibleItemCount,
             );
             // double beginOffset = _beginIdx / dataLength * contentSizeW;
             double beginOffset = _beginIdx * itemExtent;
             _initScrollController(beginOffset);
           }
-          final indicatorDataCache =
-              KLineIndicatorDataCache(KLineController.shared.data, _beginIdx);
+          final indicatorDataCache = KLineIndicatorDataCache(
+              controller.data, _beginIdx,
+              controller: controller);
           return CustomPaint(
-              painter: KLinePainter(KLineController.shared.data, _beginIdx,
+              painter: KLinePainter(controller.data, _beginIdx,
+                  controller: controller,
                   indicatorDataCache: indicatorDataCache),
               size: Size(containerW, containerH),
               child: GestureDetector(
                 onScaleStart: (details) {
                   _zoomStartBeginIdx = _beginIdx < 0 ? 0.0 : _beginIdx;
-                  _zoomStartItemCount = KLineController.shared.itemCount;
+                  _zoomStartItemCount = controller.itemCount;
                   _zoomStartFocalDx = details.localFocalPoint.dx;
                 },
                 onScaleUpdate: (details) => _klineDidZoom(details),
@@ -216,7 +223,8 @@ class _KLineViewState extends State<KLineView> {
                           child: RepaintBoundary(
                         child: CustomPaint(
                           painter: KLineIndicatorInfoPainter(
-                              KLineController.shared.data, _beginIdx,
+                              controller.data, _beginIdx,
+                              controller: controller,
                               indicatorDataCache: indicatorDataCache),
                         ),
                       )),
@@ -225,13 +233,19 @@ class _KLineViewState extends State<KLineView> {
                       alignment: Alignment.topLeft,
                       child: RepaintBoundary(
                         child: KlineInfoWidget(
-                            KLineController.shared.data, _beginIdx),
+                          controller.data,
+                          _beginIdx,
+                          controller: controller,
+                        ),
                       ),
                     ),
                     Positioned.fill(
                         child: RepaintBoundary(
                       child: KlineLongPressWidget(
-                          KLineController.shared.data, _beginIdx),
+                        controller.data,
+                        _beginIdx,
+                        controller: controller,
+                      ),
                     ))
                   ],
                 ),

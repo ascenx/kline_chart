@@ -6,6 +6,7 @@ import 'indicator_result.dart';
 class KLineIndicatorDataCache {
   final List<KLineData> klineData;
   final double beginIdx;
+  final KLineController _controller;
   final _IndicatorDataConfig _config;
   final List<IndicatorResult?> _results =
       List<IndicatorResult?>.filled(IndicatorType.values.length, null);
@@ -14,7 +15,8 @@ class KLineIndicatorDataCache {
     this.klineData,
     this.beginIdx, {
     KLineController? controller,
-  }) : _config = _IndicatorDataConfig.fromController(
+  })  : _controller = controller ?? KLineController.shared,
+        _config = _IndicatorDataConfig.fromController(
             controller ?? KLineController.shared);
 
   IndicatorResult result(IndicatorType type) {
@@ -35,31 +37,38 @@ class KLineIndicatorDataCache {
   IndicatorResult _calculate(IndicatorType type) {
     switch (type) {
       case IndicatorType.ma:
-        return IndicatorDataHandler.ma(klineData, const [7, 30], beginIdx);
+        return IndicatorDataHandler.ma(klineData, const [7, 30], beginIdx,
+            controller: _controller);
       case IndicatorType.ema:
-        return IndicatorDataHandler.ema(klineData, const [7, 25], beginIdx);
+        return IndicatorDataHandler.ema(klineData, const [7, 25], beginIdx,
+            controller: _controller);
       case IndicatorType.boll:
         return IndicatorDataHandler.boll(
-            klineData, _config.bollPeriod, _config.bollBandwidth, beginIdx);
+            klineData, _config.bollPeriod, _config.bollBandwidth, beginIdx,
+            controller: _controller);
       case IndicatorType.sar:
-        return IndicatorDataHandler.sar(klineData, beginIdx);
+        return IndicatorDataHandler.sar(klineData, beginIdx,
+            controller: _controller);
       case IndicatorType.maVol:
         return IndicatorDataHandler.ma(
             klineData, _config.volMaPeriods, beginIdx,
-            isVol: true);
+            isVol: true, controller: _controller);
       case IndicatorType.macd:
         return IndicatorDataHandler.macd(
-            klineData, _config.macdPeriods, beginIdx);
+            klineData, _config.macdPeriods, beginIdx,
+            controller: _controller);
       case IndicatorType.kdj:
-        return IndicatorDataHandler.kdj(
-            klineData, _config.kdjPeriods, beginIdx);
+        return IndicatorDataHandler.kdj(klineData, _config.kdjPeriods, beginIdx,
+            controller: _controller);
       case IndicatorType.rsi:
-        return IndicatorDataHandler.rsi(
-            klineData, _config.rsiPeriods, beginIdx);
+        return IndicatorDataHandler.rsi(klineData, _config.rsiPeriods, beginIdx,
+            controller: _controller);
       case IndicatorType.wr:
-        return IndicatorDataHandler.wr(klineData, _config.wrPeriods, beginIdx);
+        return IndicatorDataHandler.wr(klineData, _config.wrPeriods, beginIdx,
+            controller: _controller);
       case IndicatorType.obv:
-        return IndicatorDataHandler.obv(klineData, beginIdx);
+        return IndicatorDataHandler.obv(klineData, beginIdx,
+            controller: _controller);
       case IndicatorType.vol:
         return IndicatorResult.empty;
     }

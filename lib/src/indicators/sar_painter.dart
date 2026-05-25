@@ -23,6 +23,7 @@ class SARPainter {
     double top = 0.0,
     Color? pointColor,
     List<Color> lineColors = const [],
+    KLineController? controller,
   }) {
     paintData(
       canvas,
@@ -35,6 +36,7 @@ class SARPainter {
       top: top,
       pointColor: pointColor,
       lineColors: lineColors,
+      controller: controller,
     );
   }
 
@@ -49,24 +51,27 @@ class SARPainter {
     double top = 0.0,
     Color? pointColor,
     List<Color> lineColors = const [],
+    KLineController? controller,
   }) {
     if (dataList.isEmpty || dataList.first.isEmpty) {
       return;
     }
+    final resolvedController = controller ?? KLineController.shared;
 
     final values = dataList.first;
-    final spacing = KLineController.shared.spacing;
-    final itemW = KLineController.getItemWidth(size.width);
+    final spacing = resolvedController.spacing;
+    final itemW = KLineController.getItemWidth(size.width,
+        controller: resolvedController);
     final itemExtent = itemW + spacing;
     final valueOffset = maxValue - minValue;
     final contentTop = top +
-        KLineController.shared.indicatorInfoHeight +
-        KLineController.shared.mainIndicatorInfoMargin;
+        resolvedController.indicatorInfoHeight +
+        resolvedController.mainIndicatorInfoMargin;
     final radius = max(1.5, min(4.0, itemW * 0.25));
     final resolvedPointColor = pointColor ??
         (lineColors.isNotEmpty
             ? lineColors.first
-            : KLineController.shared.sarColor);
+            : resolvedController.sarColor);
     _pointPaint.color = resolvedPointColor;
     _pointPath.reset();
     var hasPoint = false;

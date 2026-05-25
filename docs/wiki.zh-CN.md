@@ -157,7 +157,7 @@ final data = KLineData.fromJson({
 
 ## 渲染 KLineView
 
-`KLineView` 是图表入口 Widget。它会读取 `KLineController.shared` 中的数据和配置。
+`KLineView` 是图表入口 Widget。默认情况下，它会读取 `KLineController.shared` 中的数据和配置。
 
 ```dart
 SizedBox(
@@ -170,9 +170,23 @@ SizedBox(
 
 当 `KLineController.shared.data` 为空时，`KLineView` 会显示一个加载状态。数据写入后，业务页面需要触发一次 rebuild。
 
+如果需要渲染互不影响的独立图表，可以传入 controller 实例：
+
+```dart
+final controller = KLineController()
+  ..data = dataList
+  ..showMainIndicators = [IndicatorType.boll]
+  ..showSubIndicators = [IndicatorType.vol, IndicatorType.macd];
+
+SizedBox(
+  height: 400,
+  child: KLineView(controller: controller),
+)
+```
+
 ## 全局控制器
 
-`KLineController.shared` 是当前包的全局配置入口。它保存数据、指标、样式、格式化和交互相关参数。
+`KLineController.shared` 是默认共享配置入口。当 `KLineView()` 没有传入 controller 时，会使用它保存数据、指标、样式、格式化和交互相关参数。
 
 ```dart
 final controller = KLineController.shared;
@@ -183,7 +197,7 @@ controller.showMainIndicators = [IndicatorType.ma];
 controller.showSubIndicators = [IndicatorType.vol, IndicatorType.macd];
 ```
 
-也可以通过构造函数拿到同一个单例：
+`KLineController()` 会创建独立 controller 实例：
 
 ```dart
 final controller = KLineController();
@@ -191,9 +205,11 @@ final controller = KLineController();
 
 注意事项：
 
-- 当前控制器是单例，适合页面内一个主要 K 线图的使用方式。
+- `KLineView()` 使用 `KLineController.shared`。
+- `KLineView(controller: controller)` 使用传入的 controller。
+- 当每个图表需要独立的数据、指标、样式、格式化、滚动状态和长按状态时，使用 `KLineController()`。
 - 修改 `data` 或配置后，如果页面没有自动 rebuild，需要业务侧调用 `setState` 或触发状态管理刷新。
-- 同一个页面如果同时渲染多个 `KLineView`，它们会共享同一份 `KLineController.shared` 配置。
+- 同一个页面如果渲染多个未传 controller 的 `KLineView()`，它们仍然会共享 `KLineController.shared`。
 
 ## 主图和副图指标
 
@@ -868,7 +884,11 @@ setState(() {});
 
 ### 为什么多个图表配置会互相影响？
 
-当前 `KLineController` 是单例，多个 `KLineView` 会共享配置。如果一个页面上同时放多个图表，需要在渲染前谨慎管理全局配置。
+未显式传入 controller 的多个 `KLineView()` 会使用 `KLineController.shared`。如果它们需要独立状态，请给每个图表传入单独的 controller：
+
+```dart
+KLineView(controller: KLineController()..data = dataList)
+```
 
 ### 为什么最新 K 线右边有空白？
 

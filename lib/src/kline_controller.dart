@@ -192,15 +192,14 @@ class KLineController {
   List<int> wrPeriods = [7, 14];
 
   List<int> currentPeriods(IndicatorType type) {
-    KLineController config = KLineController.shared;
     if (type == IndicatorType.kdj) {
-      return config.kdjPeriods;
+      return kdjPeriods;
     } else if (type == IndicatorType.macd) {
-      return config.macdPeriods;
+      return macdPeriods;
     } else if (type == IndicatorType.rsi) {
-      return config.rsiPeriods;
+      return rsiPeriods;
     } else if (type == IndicatorType.wr) {
-      return config.wrPeriods;
+      return wrPeriods;
     } else if (type == IndicatorType.obv) {
       return [0];
     }
@@ -240,13 +239,20 @@ class KLineController {
     return value.toStringAsFixed(2);
   }
 
-  static double getItemWidth(double totalWidth) {
-    double spacing = KLineController.shared.spacing;
-    double itemCount = KLineController.shared.itemCount;
+  double itemWidthFor(double totalWidth) {
+    double spacing = this.spacing;
+    double itemCount = this.itemCount;
     // item width = total width / item count - spacing
     double itemW = totalWidth / itemCount - spacing;
-    KLineController.shared.itemWidth = itemW;
+    itemWidth = itemW;
     return itemW;
+  }
+
+  static double getItemWidth(
+    double totalWidth, {
+    KLineController? controller,
+  }) {
+    return (controller ?? KLineController.shared).itemWidthFor(totalWidth);
   }
 
   static int dataIndexForLocalX({
@@ -382,8 +388,7 @@ class KLineController {
     );
   }
 
-  // singleton
-  KLineController._internal();
-  static final KLineController shared = KLineController._internal();
-  factory KLineController() => shared;
+  KLineController();
+
+  static final KLineController shared = KLineController();
 }

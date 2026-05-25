@@ -13,6 +13,8 @@
 - Fix MACD leading histogram rendering so the first visible bar keeps the correct hollow or filled style.
 - Improve chart drawing performance by reusing indicator info painters, batching paths, reducing repaint overhead, and adding benchmark coverage.
 - Add API and style documentation for advanced controller-based customization.
+- Add instance-based controllers with `KLineView(controller: ...)` while keeping `KLineController.shared` as the default legacy entry point.
+- Add an example page demonstrating multiple independent chart controllers.
 
 ## 0.0.1+4
 

@@ -91,9 +91,32 @@ class _KLinePageState extends State<KLinePage> {
 }
 ```
 
+## Independent Controllers
+
+`KLineView()` uses `KLineController.shared` by default for backward
+compatibility. To render multiple independent charts, create a controller
+instance and pass it to the view.
+
+```dart
+final controller = KLineController()
+  ..data = dataList
+  ..showMainIndicators = [IndicatorType.boll]
+  ..showSubIndicators = [IndicatorType.vol, IndicatorType.macd];
+
+SizedBox(
+  height: 400,
+  child: KLineView(controller: controller),
+)
+```
+
+Use `KLineController.shared` when you want one shared global chart
+configuration. Use `KLineController()` when each chart needs separate data,
+indicators, style, formatters, scroll state, and long-press state.
+
 ## Indicator Configuration
 
-`KLineController.shared` is the central configuration object. Update it before rebuilding `KLineView`.
+`KLineController.shared` is the default shared configuration object. For
+independent charts, configure the controller instance passed to `KLineView`.
 
 ```dart
 final controller = KLineController.shared;

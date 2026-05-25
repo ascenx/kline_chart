@@ -95,6 +95,45 @@ void main() {
     });
   });
 
+  group('KLineController instances', () {
+    test('creates independent instances while keeping shared available', () {
+      final first = KLineController();
+      final second = KLineController();
+
+      expect(first, isNot(same(KLineController.shared)));
+      expect(second, isNot(same(KLineController.shared)));
+      expect(first, isNot(same(second)));
+
+      first.data = _buildKLineData(1);
+
+      expect(first.data, hasLength(1));
+      expect(second.data, isEmpty);
+      expect(KLineController.shared.data, isEmpty);
+    });
+
+    testWidgets('KLineView renders from the provided controller',
+        (tester) async {
+      KLineController.shared.data = [];
+      final controller = KLineController()
+        ..data = _buildKLineData(5)
+        ..itemCount = 5
+        ..showMainIndicators = []
+        ..showSubIndicators = [];
+
+      await tester.pumpWidget(MaterialApp(
+        home: SizedBox(
+          width: 300,
+          height: 240,
+          child: KLineView(controller: controller),
+        ),
+      ));
+      await tester.pump();
+
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+  });
+
   group('KLineController.beginIndexForScrollOffset', () {
     test('clamps trailing overscroll to the last fully visible candle', () {
       const dataLength = 100;
@@ -1058,7 +1097,7 @@ void main() {
         data,
         0,
         const Offset(5, 20),
-        const KLineInfoStyle(
+        infoStyle: const KLineInfoStyle(
           backgroundColor: Color(0xff182430),
         ),
       );
@@ -1066,7 +1105,7 @@ void main() {
         data,
         0,
         const Offset(5, 20),
-        const KLineInfoStyle(
+        infoStyle: const KLineInfoStyle(
           backgroundColor: Color(0xff283440),
         ),
       );
