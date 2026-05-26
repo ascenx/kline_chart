@@ -21,6 +21,7 @@ KLine Chart 是一个轻量级 Flutter K 线图组件，用于构建交易、行
 - 主图指标：MA、EMA、BOLL、SAR。
 - 副图指标：VOL、MACD、KDJ、RSI、WR、OBV。
 - 支持自定义指标周期、颜色、间距、可见 K 线数量。
+- 支持价格轴自适应刻度和可选底部时间轴标签。
 - 支持最新 K 线右侧预留空白，并限制最右侧最少保留真实 K 线数量。
 - 支持价格、成交量、指标值的格式化自定义。
 - 支持初始数据、实时更新最后一根 K 线、追加新周期、前置历史数据和自动刷新。
@@ -231,6 +232,11 @@ controller.minCount = 7;
 controller.maxCount = 39;
 controller.spacing = 2.0;
 controller.showTimeChart = false;
+controller.showTimeAxis = false;
+controller.timeAxisHeight = 18.0;
+controller.timeAxisMinLabelSpacing = 64.0;
+controller.priceAxisMaxTickCount = 5;
+controller.priceAxisMinTickSpacing = 28.0;
 
 controller.klineMargin = const EdgeInsets.all(0);
 controller.subIndicatorHeight = 50.0;

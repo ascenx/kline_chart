@@ -35,7 +35,7 @@ controller.overlayStyle = const KLineOverlayStyle(
 | `backgroundColor` | `Color` | Background color painted behind the entire chart. |
 | `gridLineColor` | `Color` | Grid line color for vertical and horizontal ruler lines. |
 | `gridLineWidth` | `double` | Grid line stroke width. |
-| `rulerTextStyle` | `TextStyle` | Text style for price ruler labels. |
+| `rulerTextStyle` | `TextStyle` | Text style for price ruler labels and optional time axis labels. |
 | `highLowLineColor` | `Color` | Line color for highest and lowest price callouts. |
 | `highLowLineWidth` | `double` | Line stroke width for highest and lowest price callouts. |
 | `highLowTextStyle` | `TextStyle` | Text style for highest and lowest price labels. |
@@ -185,19 +185,42 @@ controller.indicatorColors = [
 controller.sarColor = Colors.orange;
 ```
 
+## Axis Configuration
+
+Axis density and the optional bottom time axis are configured on
+`KLineController`.
+
+| Property | Type | Default | Description |
+| --- | --- | --- | --- |
+| `priceAxisMaxTickCount` | `int` | `5` | Maximum generated price ticks on the main price axis. |
+| `priceAxisMinTickSpacing` | `double` | `28.0` | Minimum vertical spacing between price tick labels. |
+| `showTimeAxis` | `bool` | `false` | Whether to draw the bottom time axis. |
+| `timeAxisHeight` | `double` | `18.0` | Height reserved for the bottom time axis when enabled. |
+| `timeAxisMinLabelSpacing` | `double` | `64.0` | Minimum horizontal spacing between time labels. |
+
+```dart
+controller.priceAxisMaxTickCount = 5;
+controller.priceAxisMinTickSpacing = 32;
+
+controller.showTimeAxis = true;
+controller.timeAxisHeight = 18;
+controller.timeAxisMinLabelSpacing = 72;
+```
+
 ## Number Formatting
 
 Set optional formatter callbacks on `KLineController.shared` to customize
-display text for prices, volume values, and indicator values. When a formatter
-is not set, the chart keeps the built-in numeric formatting. The default volume
-formatter uses `K`, `M`, and `B` suffixes for values of at least 1,000,
-1,000,000, and 1,000,000,000.
+display text for prices, volume values, indicator values, and time axis labels.
+When a formatter is not set, the chart keeps the built-in formatting. The
+default volume formatter uses `K`, `M`, and `B` suffixes for values of at least
+1,000, 1,000,000, and 1,000,000,000.
 
 | Property | Type | Description |
 | --- | --- | --- |
 | `priceFormatter` | `String Function(double value)?` | Formats price values such as open, high, low, close, price rulers, high/low labels, and the current price marker. |
 | `volumeFormatter` | `String Function(double value)?` | Formats volume values such as candle volume, VOL rulers, and MAVOL values. |
 | `indicatorFormatter` | `String Function(double value, IndicatorType type, int? period)?` | Formats indicator values such as MA, EMA, BOLL, SAR, MACD, KDJ, RSI, WR, and OBV. |
+| `timeFormatter` | `String Function(DateTime time, KLineTimeLabelGranularity granularity)?` | Formats optional time axis labels. |
 
 ```dart
 controller.priceFormatter = (value) => value.toStringAsFixed(4);
@@ -217,6 +240,14 @@ controller.indicatorFormatter = (value, type, period) {
     return value.toStringAsFixed(6);
   }
   return value.toStringAsFixed(2);
+};
+
+controller.timeFormatter = (time, granularity) {
+  if (granularity == KLineTimeLabelGranularity.time) {
+    final minute = time.minute.toString().padLeft(2, '0');
+    return '${time.hour}:$minute';
+  }
+  return '${time.month}/${time.day}';
 };
 ```
 

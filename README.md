@@ -21,6 +21,7 @@ It is designed for crypto, stock, and trading-related apps that need a customiza
 - Main indicators: MA, EMA, BOLL, SAR.
 - Sub indicators: VOL, MACD, KDJ, RSI, WR, OBV.
 - Configurable indicator periods, colors, spacing, and visible item count.
+- Adaptive price axis ticks and optional bottom time axis labels.
 - Data lifecycle APIs for initial data, real-time last-candle updates, appends,
   prepended history, and automatic chart refresh.
 - Optional `onLoadMore` callback for loading older candles near the leading edge.
@@ -225,6 +226,11 @@ controller.minCount = 7;
 controller.maxCount = 39;
 controller.spacing = 2.0;
 controller.showTimeChart = false;
+controller.showTimeAxis = false;
+controller.timeAxisHeight = 18.0;
+controller.timeAxisMinLabelSpacing = 64.0;
+controller.priceAxisMaxTickCount = 5;
+controller.priceAxisMinTickSpacing = 28.0;
 
 controller.klineMargin = const EdgeInsets.all(0);
 controller.subIndicatorHeight = 50.0;

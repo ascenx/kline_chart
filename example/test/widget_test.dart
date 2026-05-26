@@ -20,6 +20,7 @@ void main() {
       IndicatorType.kdj,
     ];
     KLineController.shared.showTimeChart = false;
+    KLineController.shared.showTimeAxis = false;
   });
 
   testWidgets('loads overlay marker demo in the original demo',
@@ -31,6 +32,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Overlay / Marker'), findsOneWidget);
+    expect(find.text('Time Axis'), findsOneWidget);
     expect(KLineController.shared.overlays, isNotEmpty);
     expect(
       KLineController.shared.overlays.whereType<KLinePriceLine>(),
@@ -48,6 +50,22 @@ void main() {
       KLineController.shared.overlays.whereType<KLineVerticalLine>(),
       isNotEmpty,
     );
+  });
+
+  testWidgets('toggles the optional time axis in the original demo',
+      (WidgetTester tester) async {
+    await tester.binding.setSurfaceSize(const Size(800, 700));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(const MyApp());
+    await tester.pump();
+
+    expect(KLineController.shared.showTimeAxis, isFalse);
+
+    await tester.tap(find.text('Time Axis'));
+    await tester.pump();
+
+    expect(KLineController.shared.showTimeAxis, isTrue);
   });
 
   testWidgets('opens the multi controller demo from the original demo',

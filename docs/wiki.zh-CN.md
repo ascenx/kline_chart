@@ -17,6 +17,7 @@
 - [样式定制](#样式定制)
 - [长按十字线和信息浮层](#长按十字线和信息浮层)
 - [分时图模式](#分时图模式)
+- [时间轴](#时间轴)
 - [动态更新数据和配置](#动态更新数据和配置)
 - [短数据和边界行为](#短数据和边界行为)
 - [常见配置示例](#常见配置示例)
@@ -54,6 +55,8 @@ import 'package:kline_chart/kline_chart.dart';
 - `KLinePriceZone`
 - `KLineMarker`
 - `KLineVerticalLine`
+- `KLineTimeLabelGranularity`
+- `KLineTimeFormatter`
 
 ## 最小接入流程
 
@@ -381,7 +384,7 @@ controller.minTrailingVisibleItemCount = 4;
 
 ## 数字格式化
 
-价格、成交量、指标值可以分别格式化。
+价格、成交量、指标值、可选时间轴标签可以分别格式化。
 
 ```dart
 controller.priceFormatter = (value) {
@@ -410,6 +413,14 @@ controller.indicatorFormatter = (value, type, period) {
   }
   return value.toStringAsFixed(2);
 };
+
+controller.timeFormatter = (time, granularity) {
+  if (granularity == KLineTimeLabelGranularity.time) {
+    final minute = time.minute.toString().padLeft(2, '0');
+    return '${time.hour}:$minute';
+  }
+  return '${time.month}/${time.day}';
+};
 ```
 
 格式化范围：
@@ -419,6 +430,7 @@ controller.indicatorFormatter = (value, type, period) {
 | `priceFormatter` | `String Function(double value)?` | 开高低收、价格刻度、最高最低价、现价标记 |
 | `volumeFormatter` | `String Function(double value)?` | 成交量、VOL 刻度、MAVOL |
 | `indicatorFormatter` | `String Function(double value, IndicatorType type, int? period)?` | MA、EMA、BOLL、SAR、MACD、KDJ、RSI、WR、OBV |
+| `timeFormatter` | `String Function(DateTime time, KLineTimeLabelGranularity granularity)?` | 可选时间轴标签 |
 
 默认格式：
 
@@ -426,6 +438,7 @@ controller.indicatorFormatter = (value, type, period) {
 - 当前价标记默认使用 `toString()`，如果设置了 `priceFormatter`，也会走自定义格式。
 - 成交量默认按 `K`、`M`、`B` 做紧凑格式化。
 - 指标值默认使用 `toStringAsFixed(2)`。
+- 时间轴标签会根据当前可见时间跨度自动使用 `HH:mm`、`MM-dd`、`yyyy-MM` 或 `yyyy`。
 
 ## 覆盖物和标记
 
@@ -623,6 +636,36 @@ controller.chartStyle = controller.chartStyle.copyWith(
 ```dart
 controller.showTimeChart = false;
 setState(() {});
+```
+
+## 时间轴
+
+底部时间轴是可选能力，默认关闭以保持既有布局不变。开启后会在底部预留
+`timeAxisHeight`，根据当前可见 K 线的时间戳生成稀疏标签，并按可见时间跨度
+自动选择标签粒度。
+
+```dart
+final controller = KLineController.shared;
+
+controller.showTimeAxis = true;
+controller.timeAxisHeight = 18;
+controller.timeAxisMinLabelSpacing = 64;
+controller.timeFormatter = (time, granularity) {
+  if (granularity == KLineTimeLabelGranularity.time) {
+    final minute = time.minute.toString().padLeft(2, '0');
+    return '${time.hour}:$minute';
+  }
+  return '${time.month}-${time.day}';
+};
+
+setState(() {});
+```
+
+价格刻度默认会自适应生成，也可以调整密度：
+
+```dart
+controller.priceAxisMaxTickCount = 5;
+controller.priceAxisMinTickSpacing = 28;
 ```
 
 ## 动态更新数据和配置
@@ -827,6 +870,7 @@ controller.volumeFormatter = (value) {
 | `priceFormatter` | `KLineNumberFormatter?` | `null` | 价格格式化 |
 | `volumeFormatter` | `KLineNumberFormatter?` | `null` | 成交量格式化 |
 | `indicatorFormatter` | `KLineIndicatorFormatter?` | `null` | 指标值格式化 |
+| `timeFormatter` | `KLineTimeFormatter?` | `null` | 时间轴标签格式化 |
 | `itemCount` | `double` | `30` | 当前可见 K 线数量 |
 | `trailingBlankItemCount` | `double` | `5` | 初始右侧空白周期数 |
 | `maxTrailingBlankItemCount` | `double` | `20` | 最大右侧空白周期数 |
@@ -838,6 +882,11 @@ controller.volumeFormatter = (value) {
 | `maxCount` | `double` | `39` | 缩放最多可见数量 |
 | `mainIndicatorInfoMargin` | `double` | `5.0` | 主图指标信息边距 |
 | `subIndicatorInfoMargin` | `double` | `5.0` | 副图指标信息边距 |
+| `priceAxisMaxTickCount` | `int` | `5` | 价格轴最多生成的刻度数量 |
+| `priceAxisMinTickSpacing` | `double` | `28.0` | 价格轴标签最小垂直间距 |
+| `showTimeAxis` | `bool` | `false` | 是否绘制底部时间轴 |
+| `timeAxisHeight` | `double` | `18.0` | 时间轴开启时预留的高度 |
+| `timeAxisMinLabelSpacing` | `double` | `64.0` | 时间轴标签最小水平间距 |
 | `showTimeChart` | `bool` | `false` | 是否显示分时图 |
 | `infoWidgetMaxWidth` | `double?` | `130` | 长按详情浮层最大宽度 |
 | `infoWidgetMargin` | `EdgeInsets` | `EdgeInsets.only(left: 8, top: 10)` | 长按详情浮层外边距 |
@@ -866,6 +915,7 @@ controller.volumeFormatter = (value) {
 | `formatCurrentPrice(value)` | `String` | - | 执行当前价格式化 |
 | `formatVolume(value)` | `String` | - | 执行成交量格式化 |
 | `formatIndicator(value, type, period)` | `String` | - | 执行指标格式化 |
+| `formatTime(time, granularity)` | `String` | - | 执行时间轴格式化 |
 
 ### 格式化类型
 
@@ -873,6 +923,7 @@ controller.volumeFormatter = (value) {
 | --- | --- | --- |
 | `KLineNumberFormatter` | `String Function(double value)` | 价格和成交量格式化函数 |
 | `KLineIndicatorFormatter` | `String Function(double value, IndicatorType type, int? period)` | 指标值格式化函数，可根据指标类型和周期返回不同展示文本 |
+| `KLineTimeFormatter` | `String Function(DateTime time, KLineTimeLabelGranularity granularity)` | 可选时间轴标签格式化函数 |
 
 ### `KLineView`
 

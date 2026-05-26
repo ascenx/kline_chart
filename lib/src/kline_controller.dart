@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import './kline_axis.dart';
 import './kline_chart_style.dart';
 import './kline_data.dart';
 import './kline_overlay.dart';
@@ -205,6 +206,9 @@ class KLineController extends ChangeNotifier {
   /// Formats indicator values such as MA, MACD, RSI, KDJ, WR, and OBV.
   KLineIndicatorFormatter? indicatorFormatter;
 
+  /// Formats bottom time axis labels.
+  KLineTimeFormatter? timeFormatter;
+
   bool isDebug = false;
   Color randomColor = Color.fromARGB(
       100, Random().nextInt(255), Random().nextInt(255), Random().nextInt(255));
@@ -245,6 +249,21 @@ class KLineController extends ChangeNotifier {
 
   double mainIndicatorInfoMargin = 5.0;
   double subIndicatorInfoMargin = 5.0;
+
+  /// Maximum price ticks drawn on the main price axis.
+  int priceAxisMaxTickCount = 5;
+
+  /// Minimum vertical spacing between adjacent price axis labels.
+  double priceAxisMinTickSpacing = 28.0;
+
+  /// Whether to draw the bottom time axis.
+  bool showTimeAxis = false;
+
+  /// Height reserved for the bottom time axis when enabled.
+  double timeAxisHeight = 18.0;
+
+  /// Minimum horizontal spacing between adjacent time axis labels.
+  double timeAxisMinLabelSpacing = 64.0;
 
   bool showTimeChart = false;
 
@@ -347,6 +366,11 @@ class KLineController extends ChangeNotifier {
   String formatIndicator(double value, IndicatorType type, {int? period}) {
     return indicatorFormatter?.call(value, type, period) ??
         value.toStringAsFixed(2);
+  }
+
+  String formatTime(DateTime time, KLineTimeLabelGranularity granularity) {
+    return timeFormatter?.call(time, granularity) ??
+        KLineAxis.defaultTimeLabel(time, granularity);
   }
 
   static String _formatCompactVolume(double value) {

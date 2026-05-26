@@ -19,6 +19,7 @@ This document covers the full usage surface of `kline_chart`: data setup, chart 
 - [Chart Layout](#chart-layout)
 - [Long Press Crosshair And Info Overlay](#long-press-crosshair-and-info-overlay)
 - [Time Chart Mode](#time-chart-mode)
+- [Time Axis](#time-axis)
 - [Dynamic Data And Config Updates](#dynamic-data-and-config-updates)
 - [Short Data And Edge Cases](#short-data-and-edge-cases)
 - [Common Configuration Examples](#common-configuration-examples)
@@ -56,6 +57,8 @@ The main package exports these public APIs:
 - `KLinePriceZone`
 - `KLineMarker`
 - `KLineVerticalLine`
+- `KLineTimeLabelGranularity`
+- `KLineTimeFormatter`
 
 ## Minimal Setup
 
@@ -389,7 +392,8 @@ When the data set is short, the chart limits the effective blank space so real c
 
 ## Number Formatting
 
-Prices, volumes, and indicator values can be formatted independently.
+Prices, volumes, indicator values, and optional time axis labels can be
+formatted independently.
 
 ```dart
 controller.priceFormatter = (value) {
@@ -418,6 +422,14 @@ controller.indicatorFormatter = (value, type, period) {
   }
   return value.toStringAsFixed(2);
 };
+
+controller.timeFormatter = (time, granularity) {
+  if (granularity == KLineTimeLabelGranularity.time) {
+    final minute = time.minute.toString().padLeft(2, '0');
+    return '${time.hour}:$minute';
+  }
+  return '${time.month}/${time.day}';
+};
 ```
 
 Formatting coverage:
@@ -427,6 +439,7 @@ Formatting coverage:
 | `priceFormatter` | `String Function(double value)?` | Open, high, low, close, price rulers, high/low labels, current price marker |
 | `volumeFormatter` | `String Function(double value)?` | Candle volume, VOL rulers, MAVOL |
 | `indicatorFormatter` | `String Function(double value, IndicatorType type, int? period)?` | MA, EMA, BOLL, SAR, MACD, KDJ, RSI, WR, OBV |
+| `timeFormatter` | `String Function(DateTime time, KLineTimeLabelGranularity granularity)?` | Optional time axis labels |
 
 Default formatting:
 
@@ -434,6 +447,7 @@ Default formatting:
 - The current price marker uses `toString()` unless `priceFormatter` is set.
 - Volumes use compact `K`, `M`, and `B` suffixes.
 - Indicator values use `toStringAsFixed(2)`.
+- Time axis labels use `HH:mm`, `MM-dd`, `yyyy-MM`, or `yyyy` based on the visible time span.
 
 ## Overlays And Markers
 
@@ -636,6 +650,37 @@ Switch back to candlestick mode:
 ```dart
 controller.showTimeChart = false;
 setState(() {});
+```
+
+## Time Axis
+
+The bottom time axis is optional and off by default to preserve existing chart
+layout. When enabled, it reserves `timeAxisHeight` at the bottom, generates
+sparse labels from visible candle timestamps, and chooses label granularity from
+the current visible time span.
+
+```dart
+final controller = KLineController.shared;
+
+controller.showTimeAxis = true;
+controller.timeAxisHeight = 18;
+controller.timeAxisMinLabelSpacing = 64;
+controller.timeFormatter = (time, granularity) {
+  if (granularity == KLineTimeLabelGranularity.time) {
+    final minute = time.minute.toString().padLeft(2, '0');
+    return '${time.hour}:$minute';
+  }
+  return '${time.month}-${time.day}';
+};
+
+setState(() {});
+```
+
+Price ruler ticks are adaptive by default. You can tune their density:
+
+```dart
+controller.priceAxisMaxTickCount = 5;
+controller.priceAxisMinTickSpacing = 28;
 ```
 
 ## Dynamic Data And Config Updates
@@ -843,6 +888,7 @@ controller.volumeFormatter = (value) {
 | `priceFormatter` | `KLineNumberFormatter?` | `null` | Price formatter |
 | `volumeFormatter` | `KLineNumberFormatter?` | `null` | Volume formatter |
 | `indicatorFormatter` | `KLineIndicatorFormatter?` | `null` | Indicator value formatter |
+| `timeFormatter` | `KLineTimeFormatter?` | `null` | Time axis label formatter |
 | `itemCount` | `double` | `30` | Current visible candle count |
 | `trailingBlankItemCount` | `double` | `5` | Initial trailing blank candle slots |
 | `maxTrailingBlankItemCount` | `double` | `20` | Maximum trailing blank candle slots |
@@ -854,6 +900,11 @@ controller.volumeFormatter = (value) {
 | `maxCount` | `double` | `39` | Maximum visible count during zoom |
 | `mainIndicatorInfoMargin` | `double` | `5.0` | Main indicator info margin |
 | `subIndicatorInfoMargin` | `double` | `5.0` | Sub indicator info margin |
+| `priceAxisMaxTickCount` | `int` | `5` | Maximum generated price axis ticks |
+| `priceAxisMinTickSpacing` | `double` | `28.0` | Minimum vertical spacing between price axis labels |
+| `showTimeAxis` | `bool` | `false` | Whether to draw the bottom time axis |
+| `timeAxisHeight` | `double` | `18.0` | Height reserved for the time axis when enabled |
+| `timeAxisMinLabelSpacing` | `double` | `64.0` | Minimum horizontal spacing between time axis labels |
 | `showTimeChart` | `bool` | `false` | Whether to render time chart mode |
 | `infoWidgetMaxWidth` | `double?` | `130` | Max width of the long-press info overlay |
 | `infoWidgetMargin` | `EdgeInsets` | `EdgeInsets.only(left: 8, top: 10)` | Long-press info overlay margin |
@@ -882,6 +933,7 @@ controller.volumeFormatter = (value) {
 | `formatCurrentPrice(value)` | `String` | - | Runs current price formatting |
 | `formatVolume(value)` | `String` | - | Runs volume formatting |
 | `formatIndicator(value, type, period)` | `String` | - | Runs indicator formatting |
+| `formatTime(time, granularity)` | `String` | - | Runs time axis formatting |
 
 ### Formatter Types
 
@@ -889,6 +941,7 @@ controller.volumeFormatter = (value) {
 | --- | --- | --- |
 | `KLineNumberFormatter` | `String Function(double value)` | Formatter for price and volume values |
 | `KLineIndicatorFormatter` | `String Function(double value, IndicatorType type, int? period)` | Formatter for indicator values, with access to indicator type and period |
+| `KLineTimeFormatter` | `String Function(DateTime time, KLineTimeLabelGranularity granularity)` | Formatter for optional time axis labels |
 
 ### `KLineView`
 

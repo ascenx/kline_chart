@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import './indicators/indicator_data_cache.dart';
 import './indicators/indicator_result.dart';
+import './kline_axis.dart';
 import './kline_chart_style.dart';
 import './kline_controller.dart';
 import './indicators/indicator_line_painter.dart';
@@ -25,9 +26,16 @@ class KLinePainter extends CustomPainter {
   final KLineNumberFormatter? _priceFormatter;
   final KLineNumberFormatter? _volumeFormatter;
   final KLineIndicatorFormatter? _indicatorFormatter;
+  final KLineTimeFormatter? _timeFormatter;
   final List<Color> _indicatorColors;
   final List<KLineOverlay> _overlays;
   final Color _sarColor;
+  final bool _showTimeChart;
+  final bool _showTimeAxis;
+  final double _timeAxisHeight;
+  final double _timeAxisMinLabelSpacing;
+  final int _priceAxisMaxTickCount;
+  final double _priceAxisMinTickSpacing;
   final KLineIndicatorDataCache _indicatorDataCache;
 
   KLinePainter(this.klineData, this.beginIdx,
@@ -43,11 +51,21 @@ class KLinePainter extends CustomPainter {
             (controller ?? KLineController.shared).volumeFormatter,
         _indicatorFormatter =
             (controller ?? KLineController.shared).indicatorFormatter,
+        _timeFormatter = (controller ?? KLineController.shared).timeFormatter,
         _indicatorColors = List<Color>.of(
             (controller ?? KLineController.shared).indicatorColors),
         _overlays = List<KLineOverlay>.of(
             (controller ?? KLineController.shared).overlays),
         _sarColor = (controller ?? KLineController.shared).sarColor,
+        _showTimeChart = (controller ?? KLineController.shared).showTimeChart,
+        _showTimeAxis = (controller ?? KLineController.shared).showTimeAxis,
+        _timeAxisHeight = (controller ?? KLineController.shared).timeAxisHeight,
+        _timeAxisMinLabelSpacing =
+            (controller ?? KLineController.shared).timeAxisMinLabelSpacing,
+        _priceAxisMaxTickCount =
+            (controller ?? KLineController.shared).priceAxisMaxTickCount,
+        _priceAxisMinTickSpacing =
+            (controller ?? KLineController.shared).priceAxisMinTickSpacing,
         _indicatorDataCache = indicatorDataCache ??
             KLineIndicatorDataCache(klineData, beginIdx,
                 controller: controller ?? KLineController.shared);
@@ -139,7 +157,10 @@ class KLinePainter extends CustomPainter {
 
     // debugPrint('debug: kline painter repaint');
 
-    bool isTimeChart = controller.showTimeChart;
+    bool isTimeChart = _showTimeChart;
+    final timeAxisHeight = _showTimeAxis
+        ? _timeAxisHeight.clamp(0.0, size.height).toDouble()
+        : 0.0;
 
     final showSubIndicators = controller.showSubIndicators;
     int subIndicatorCount = showSubIndicators.length;
@@ -158,6 +179,7 @@ class KLinePainter extends CustomPainter {
     // main draw area height
     double mainHeight = size.height -
         (controller.subIndicatorHeight + indicatorSpacing) * subIndicatorCount -
+        timeAxisHeight -
         controller.klineMargin.bottom;
 
     _timeLineAreaPaint.shader = ui.Gradient.linear(
@@ -271,14 +293,8 @@ class KLinePainter extends CustomPainter {
       }
     }
 
-    _drawRulerLine(
-        canvas,
-        mainHeight,
-        size.width,
-        indicatorInfoHeight + controller.mainIndicatorInfoMargin,
-        highest,
-        lowest,
-        size);
+    _drawRulerLine(canvas, mainHeight, size.width, highest, lowest, size,
+        drawVerticalGridLines: !_showTimeAxis);
 
     // KDJ, RSI, WR, MACD, OBV
     Map<IndicatorType, dynamic> subIndicatorData = {};
@@ -527,6 +543,7 @@ class KLinePainter extends CustomPainter {
       var type = showSubIndicators[idx];
       int orderIdx = subIndicatorCount - idx;
       double subTop = size.height -
+          timeAxisHeight -
           orderIdx * (indicatorH + indicatorSpacing) +
           indicatorSpacing;
 
@@ -578,6 +595,15 @@ class KLinePainter extends CustomPainter {
             showInfo: false);
       }
     }
+
+    _drawTimeAxis(
+      canvas,
+      width: size.width,
+      axisTop: size.height - controller.klineMargin.bottom - timeAxisHeight,
+      axisHeight: timeAxisHeight,
+      itemWidth: itemW,
+      spacing: spacing,
+    );
 
     // draw current price
     double currentPrice = klineData.last.close;
@@ -689,30 +715,97 @@ class KLinePainter extends CustomPainter {
             offsetY));
   }
 
-  void _drawRulerLine(Canvas canvas, double height, double width, double top,
-      double highestPrice, double lowestPrice, Size canvasSize) {
-    double priceOffset = highestPrice - lowestPrice;
+  void _drawRulerLine(Canvas canvas, double height, double width,
+      double highestPrice, double lowestPrice, Size canvasSize,
+      {required bool drawVerticalGridLines}) {
     var ctr = controller;
     double scaleTop = ctr.mainIndicatorInfoMargin +
         ctr.indicatorInfoHeight +
         ctr.klineMargin.top;
-    double scaleHeight = height; // mainHeight - fontHeight
+    final ticks = KLineAxis.priceTicks(
+      minValue: lowestPrice,
+      maxValue: highestPrice,
+      top: scaleTop,
+      height: height,
+      maxTickCount: _priceAxisMaxTickCount,
+      minTickSpacing: _priceAxisMinTickSpacing,
+    );
+
     // draw main ruler
-    for (var i = 0; i < 5; ++i) {
-      // draw vertical line
-      canvas.drawLine(Offset(width * i / 5, 0),
-          Offset(width * i / 5, canvasSize.height), _rulerPaint);
-      // draw horizontal line
-      if (i > 0) {
-        canvas.drawLine(Offset(0, height * i / 4 + top),
-            Offset(width, height * i / 4 + top), _rulerPaint);
+    if (drawVerticalGridLines) {
+      for (var i = 0; i < 5; ++i) {
+        final x = width * i / 5;
+        canvas.drawLine(
+            Offset(x, 0), Offset(x, canvasSize.height), _rulerPaint);
       }
-      // draw rule text
+    }
+
+    for (final tick in ticks) {
+      if (tick.y > scaleTop && tick.y < scaleTop + height) {
+        canvas.drawLine(Offset(0, tick.y), Offset(width, tick.y), _rulerPaint);
+      }
       _drawText(
-          canvas,
-          controller.formatPrice(highestPrice - priceOffset * i / 4),
-          Offset(width - 56, scaleHeight * i / 4 + scaleTop - 12),
-          width: 56);
+        canvas,
+        controller.formatPrice(tick.value),
+        Offset(width - 56, tick.y - 6),
+        width: 56,
+      );
+    }
+  }
+
+  void _drawTimeAxis(
+    Canvas canvas, {
+    required double width,
+    required double axisTop,
+    required double axisHeight,
+    required double itemWidth,
+    required double spacing,
+  }) {
+    if (!_showTimeAxis || axisHeight <= 0 || klineData.isEmpty) {
+      return;
+    }
+
+    final ticks = KLineAxis.timeTicksForIndexedData(
+      dataLength: klineData.length,
+      timeAt: (index) => klineData[index].time,
+      beginIndex: beginIdx,
+      itemWidth: itemWidth,
+      spacing: spacing,
+      itemCount: controller.itemCount,
+      viewportWidth: width,
+      minLabelSpacing: _timeAxisMinLabelSpacing,
+    );
+    if (ticks.isEmpty) {
+      return;
+    }
+
+    canvas.drawLine(Offset(0, axisTop), Offset(width, axisTop), _rulerPaint);
+
+    final style = _chartStyle.rulerTextStyle;
+    var lastLabelRight = double.negativeInfinity;
+    for (final tick in ticks) {
+      canvas.drawLine(Offset(tick.x, 0), Offset(tick.x, axisTop), _rulerPaint);
+
+      final time = DateTime.fromMillisecondsSinceEpoch(tick.time);
+      final label = controller.formatTime(time, tick.granularity);
+      _textPainter.text = TextSpan(text: label, style: style);
+      _textPainter.layout();
+
+      final maxLabelLeft =
+          width > _textPainter.width ? width - _textPainter.width : 0.0;
+      final labelLeft = (tick.x - _textPainter.width * 0.5)
+          .clamp(0.0, maxLabelLeft)
+          .toDouble();
+      final labelRight = labelLeft + _textPainter.width;
+      if (labelLeft < lastLabelRight + 4) {
+        continue;
+      }
+
+      final labelTop = axisTop +
+          (axisHeight - _textPainter.height).clamp(0.0, axisHeight).toDouble() *
+              0.5;
+      _textPainter.paint(canvas, Offset(labelLeft, labelTop));
+      lastLabelRight = labelRight;
     }
   }
 
@@ -792,6 +885,13 @@ class KLinePainter extends CustomPainter {
         oldDelegate._priceFormatter != _priceFormatter ||
         oldDelegate._volumeFormatter != _volumeFormatter ||
         oldDelegate._indicatorFormatter != _indicatorFormatter ||
+        oldDelegate._timeFormatter != _timeFormatter ||
+        oldDelegate._showTimeChart != _showTimeChart ||
+        oldDelegate._showTimeAxis != _showTimeAxis ||
+        oldDelegate._timeAxisHeight != _timeAxisHeight ||
+        oldDelegate._timeAxisMinLabelSpacing != _timeAxisMinLabelSpacing ||
+        oldDelegate._priceAxisMaxTickCount != _priceAxisMaxTickCount ||
+        oldDelegate._priceAxisMinTickSpacing != _priceAxisMinTickSpacing ||
         !listEquals(oldDelegate._indicatorColors, _indicatorColors) ||
         !listEquals(oldDelegate._overlays, _overlays) ||
         oldDelegate._sarColor != _sarColor;

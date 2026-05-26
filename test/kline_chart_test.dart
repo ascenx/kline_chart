@@ -11,6 +11,7 @@ import 'package:kline_chart/src/indicators/macd_painter.dart';
 import 'package:kline_chart/src/indicators/indicator_info_painter.dart';
 import 'package:kline_chart/src/indicators/sar_painter.dart';
 import 'package:kline_chart/src/indicators/vol_painter.dart';
+import 'package:kline_chart/src/kline_axis.dart';
 import 'package:kline_chart/src/kline_info_widget.dart';
 import 'package:kline_chart/src/kline_long_press_widget.dart';
 import 'package:kline_chart/src/kline_painter.dart';
@@ -49,6 +50,12 @@ void main() {
     KLineController.shared.priceFormatter = null;
     KLineController.shared.volumeFormatter = null;
     KLineController.shared.indicatorFormatter = null;
+    KLineController.shared.timeFormatter = null;
+    KLineController.shared.priceAxisMaxTickCount = 5;
+    KLineController.shared.priceAxisMinTickSpacing = 28.0;
+    KLineController.shared.showTimeAxis = false;
+    KLineController.shared.timeAxisHeight = 18.0;
+    KLineController.shared.timeAxisMinLabelSpacing = 64.0;
     KLineController.shared.showTimeChart = false;
     KLineController.shared.longPressOffset.update(Offset.zero);
   });
@@ -94,6 +101,141 @@ void main() {
         ),
         'MACD:12:7.89',
       );
+    });
+
+    test('formats time labels and supports a custom time formatter', () {
+      final time = DateTime(2024, 1, 2, 3, 4);
+
+      expect(
+        KLineController.shared.formatTime(
+          time,
+          KLineTimeLabelGranularity.time,
+        ),
+        '03:04',
+      );
+
+      KLineController.shared.timeFormatter = (time, granularity) {
+        return '${granularity.name}:${time.year}';
+      };
+
+      expect(
+        KLineController.shared.formatTime(
+          time,
+          KLineTimeLabelGranularity.month,
+        ),
+        'month:2024',
+      );
+    });
+  });
+
+  group('KLineAxis', () {
+    test('generates nice price ticks within the visible price range', () {
+      final ticks = KLineAxis.priceTicks(
+        minValue: 101,
+        maxValue: 199,
+        top: 10,
+        height: 200,
+        maxTickCount: 5,
+        minTickSpacing: 40,
+      );
+
+      expect(ticks.map((tick) => tick.value), [120, 140, 160, 180]);
+      expect(ticks.first.y, closeTo(171.224489, 0.000001));
+      expect(ticks.last.y, closeTo(48.775510, 0.000001));
+    });
+
+    test('returns a centered price tick when the visible range is flat', () {
+      final ticks = KLineAxis.priceTicks(
+        minValue: 10,
+        maxValue: 10,
+        top: 4,
+        height: 80,
+      );
+
+      expect(ticks, hasLength(1));
+      expect(ticks.single.value, 10);
+      expect(ticks.single.y, 44);
+    });
+
+    test('selects time label granularity from the visible span', () {
+      final start = DateTime(2024, 1, 1).millisecondsSinceEpoch;
+
+      expect(
+        KLineAxis.timeGranularityForSpan(
+          start,
+          start + const Duration(hours: 6).inMilliseconds,
+        ),
+        KLineTimeLabelGranularity.time,
+      );
+      expect(
+        KLineAxis.timeGranularityForSpan(
+          start,
+          start + const Duration(days: 30).inMilliseconds,
+        ),
+        KLineTimeLabelGranularity.day,
+      );
+      expect(
+        KLineAxis.timeGranularityForSpan(
+          start,
+          start + const Duration(days: 365).inMilliseconds,
+        ),
+        KLineTimeLabelGranularity.month,
+      );
+      expect(
+        KLineAxis.timeGranularityForSpan(
+          start,
+          start + const Duration(days: 900).inMilliseconds,
+        ),
+        KLineTimeLabelGranularity.year,
+      );
+    });
+
+    test('generates sparse time ticks aligned to visible candle centers', () {
+      final start = DateTime(2024, 1, 1, 9, 30).millisecondsSinceEpoch;
+      final times = List.generate(
+        20,
+        (index) => start + Duration(minutes: index).inMilliseconds,
+      );
+
+      final ticks = KLineAxis.timeTicks(
+        times: times,
+        beginIndex: 2.5,
+        itemWidth: 8,
+        spacing: 2,
+        itemCount: 10,
+        viewportWidth: 100,
+        minLabelSpacing: 35,
+      );
+
+      expect(ticks.map((tick) => tick.dataIndex), [4, 8, 12]);
+      expect(ticks.map((tick) => tick.x), [19, 59, 99]);
+      expect(
+        ticks.map((tick) => tick.granularity).toSet(),
+        {KLineTimeLabelGranularity.time},
+      );
+    });
+
+    test('generates time ticks from indexed access without requiring a copy',
+        () {
+      final start = DateTime(2024, 1, 1, 9, 30).millisecondsSinceEpoch;
+      var accessCount = 0;
+
+      final ticks = KLineAxis.timeTicksForIndexedData(
+        dataLength: 20,
+        timeAt: (index) {
+          accessCount += 1;
+          return start + Duration(minutes: index).inMilliseconds;
+        },
+        beginIndex: 2.5,
+        itemWidth: 8,
+        spacing: 2,
+        itemCount: 10,
+        viewportWidth: 100,
+        minLabelSpacing: 35,
+      );
+
+      expect(ticks.map((tick) => tick.dataIndex), [4, 8, 12]);
+      expect(accessCount, lessThan(20));
     });
   });
 
@@ -501,6 +643,18 @@ void main() {
       expect(newPainter.shouldRepaint(oldPainter), isTrue);
     });
 
+    test('repaints when axis configuration changes', () {
+      KLineController.shared.showTimeAxis = false;
+      KLineController.shared.priceAxisMaxTickCount = 5;
+      final oldPainter = KLinePainter(const [], 10);
+
+      KLineController.shared.showTimeAxis = true;
+      KLineController.shared.priceAxisMaxTickCount = 6;
+      final newPainter = KLinePainter(const [], 10);
+
+      expect(newPainter.shouldRepaint(oldPainter), isTrue);
+    });
+
     test('uses chart and candle styles while painting the main chart',
         () async {
       KLineController.shared.itemCount = 1;
@@ -782,6 +936,29 @@ void main() {
         (tester) async {
       KLineController.shared.data = _buildKLineData(5);
       KLineController.shared.showTimeChart = true;
+
+      await tester.pumpWidget(MaterialApp(
+        home: SizedBox(width: 300, height: 240, child: KLineView()),
+      ));
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('renders optional time axis without invalid canvas values',
+        (tester) async {
+      final start = DateTime(2024, 1, 1, 9, 30).millisecondsSinceEpoch;
+      KLineController.shared.data = List.generate(40, (index) {
+        return KLineData(
+          open: 10.0 + index,
+          high: 11.0 + index,
+          low: 9.0 + index,
+          close: 10.5 + index,
+          volume: 100.0 + index,
+          time: start + Duration(minutes: index).inMilliseconds,
+        );
+      });
+      KLineController.shared.showTimeAxis = true;
 
       await tester.pumpWidget(MaterialApp(
         home: SizedBox(width: 300, height: 240, child: KLineView()),

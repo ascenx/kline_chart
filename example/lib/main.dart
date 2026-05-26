@@ -34,6 +34,7 @@ class _MyHomePageState extends State<MyHomePage> {
       KLineController.shared.showSubIndicators.map((e) => e.name).toList();
 
   bool _showTimeChart = false;
+  bool _showTimeAxis = false;
   bool _showOverlays = true;
   List<KLineData> _demoData = const [];
 
@@ -198,6 +199,14 @@ class _MyHomePageState extends State<MyHomePage> {
                       onTap: () => setState(() {
                         _showTimeChart = !_showTimeChart;
                         KLineController.shared.showTimeChart = _showTimeChart;
+                      }),
+                    ),
+                    _buildToggle(
+                      label: 'Time Axis',
+                      selected: _showTimeAxis,
+                      onTap: () => setState(() {
+                        _showTimeAxis = !_showTimeAxis;
+                        KLineController.shared.showTimeAxis = _showTimeAxis;
                       }),
                     ),
                     _buildToggle(
