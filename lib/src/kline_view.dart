@@ -41,6 +41,7 @@ class _KLineViewState extends State<KLineView> {
   double _pendingScrollItemCount = 0.0;
   bool _hasPendingScrollSync = false;
   bool _isLoadingMore = false;
+  int _handledDataVersion = 0;
 
   // int _dataLength = 0;
 
@@ -59,6 +60,7 @@ class _KLineViewState extends State<KLineView> {
   @override
   void initState() {
     super.initState();
+    _handledDataVersion = widget.controller.dataVersion;
     widget.controller.addListener(_handleControllerChanged);
   }
 
@@ -75,10 +77,17 @@ class _KLineViewState extends State<KLineView> {
     _beginIdx = -1.0;
     _hasPendingScrollSync = false;
     _isLoadingMore = false;
+    _handledDataVersion = widget.controller.dataVersion;
   }
 
   void _handleControllerChanged() {
     if (!mounted) return;
+
+    if (widget.controller.dataVersion == _handledDataVersion) {
+      setState(() {});
+      return;
+    }
+    _handledDataVersion = widget.controller.dataVersion;
 
     final change = widget.controller.lastDataChange;
     if (change == null) {

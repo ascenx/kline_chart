@@ -25,6 +25,7 @@ KLine Chart 是一个轻量级 Flutter K 线图组件，用于构建交易、行
 - 支持价格、成交量、指标值的格式化自定义。
 - 支持初始数据、实时更新最后一根 K 线、追加新周期、前置历史数据和自动刷新。
 - 支持滚动到左侧边缘附近时通过 `onLoadMore` 加载更多历史 K 线。
+- 支持展示型覆盖物：价格线、价格区间、买卖点标记和事件竖线。
 - 对短数据、平盘数据、零成交量数据做了稳定性处理。
 
 ## 安装
@@ -136,6 +137,38 @@ KLineView(
     controller.prependHistory(olderCandles);
   },
 )
+```
+
+## 覆盖物和标记
+
+覆盖物适合展示业务标注，例如开仓价、止盈止损价、支撑区间、买卖点和事件线。覆盖物只负责展示，不会改变主图价格缩放范围。
+
+```dart
+controller.setOverlays([
+  KLinePriceLine(
+    price: 64200,
+    label: 'Entry',
+    color: Colors.blue,
+  ),
+  KLinePriceZone(
+    fromPrice: 60000,
+    toPrice: 61000,
+    label: 'Support',
+    color: Colors.green,
+  ),
+  KLineMarker(
+    time: 1710000000000,
+    price: 63500,
+    type: KLineMarkerType.buy,
+  ),
+  KLineVerticalLine(
+    time: 1710000000000,
+    label: 'Event',
+    color: Colors.orange,
+  ),
+]);
+
+controller.clearOverlays();
 ```
 
 ## 数据模型
@@ -263,7 +296,7 @@ controller.indicatorFormatter = (value, type, period) {
 
 ## 样式配置
 
-样式相关配置集中在 `KLineChartStyle`、`KLineCandleStyle`、`KLineVolumeStyle`、`KLineCrosshairStyle`、`KLineInfoStyle` 中。
+样式相关配置集中在 `KLineChartStyle`、`KLineCandleStyle`、`KLineVolumeStyle`、`KLineCrosshairStyle`、`KLineInfoStyle`、`KLineOverlayStyle` 中。
 
 ```dart
 final controller = KLineController.shared;
@@ -277,6 +310,12 @@ controller.chartStyle = const KLineChartStyle(
 controller.candleStyle = const KLineCandleStyle(
   riseColor: Color(0xff22ab94),
   fallColor: Color(0xfff23645),
+);
+
+controller.overlayStyle = const KLineOverlayStyle(
+  priceLineStrokeWidth: 1,
+  zoneOpacity: 0.12,
+  markerRadius: 6,
 );
 ```
 

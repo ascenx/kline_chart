@@ -34,13 +34,24 @@ class _MyHomePageState extends State<MyHomePage> {
       KLineController.shared.showSubIndicators.map((e) => e.name).toList();
 
   bool _showTimeChart = false;
+  bool _showOverlays = true;
+  List<KLineData> _demoData = const [];
 
   @override
   initState() {
     super.initState();
 
     loadDemoKLineData().then((jsonData) {
+      _demoData = jsonData;
+      KLineController.shared.overlayStyle = const KLineOverlayStyle(
+        priceLineColor: Color(0xff2563eb),
+        priceLineStrokeWidth: 1,
+        zoneOpacity: 0.14,
+        markerRadius: 6,
+        verticalLineColor: Color(0xfff59e0b),
+      );
       KLineController.shared.setData(jsonData);
+      _applyDemoOverlays();
       setState(() {});
     });
   }
@@ -88,6 +99,31 @@ class _MyHomePageState extends State<MyHomePage> {
           subIndicators.map((e) => IndicatorType.fromName(e)).toList();
     }
     setState(() {});
+  }
+
+  void _applyDemoOverlays() {
+    if (_showOverlays) {
+      KLineController.shared.setOverlays(buildDemoOverlays(_demoData));
+    } else {
+      KLineController.shared.clearOverlays();
+    }
+  }
+
+  Widget _buildToggle({
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.only(right: 16),
+        child: Text(
+          label,
+          style: TextStyle(color: selected ? Colors.blue : Colors.grey),
+        ),
+      ),
+    );
   }
 
   @override
@@ -154,16 +190,25 @@ class _MyHomePageState extends State<MyHomePage> {
                 alignment: Alignment.centerLeft,
                 height: 50,
                 padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: InkWell(
-                  onTap: () => setState(() {
-                    _showTimeChart = !_showTimeChart;
-                    KLineController.shared.showTimeChart = _showTimeChart;
-                  }),
-                  child: Text(
-                    'Time',
-                    style: TextStyle(
-                        color: _showTimeChart ? Colors.blue : Colors.grey),
-                  ),
+                child: Row(
+                  children: [
+                    _buildToggle(
+                      label: 'Time',
+                      selected: _showTimeChart,
+                      onTap: () => setState(() {
+                        _showTimeChart = !_showTimeChart;
+                        KLineController.shared.showTimeChart = _showTimeChart;
+                      }),
+                    ),
+                    _buildToggle(
+                      label: 'Overlay / Marker',
+                      selected: _showOverlays,
+                      onTap: () => setState(() {
+                        _showOverlays = !_showOverlays;
+                        _applyDemoOverlays();
+                      }),
+                    ),
+                  ],
                 )),
             Container(
                 width: MediaQuery.of(context).size.width,

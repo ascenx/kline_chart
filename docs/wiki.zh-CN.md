@@ -1,6 +1,6 @@
 # KLine Chart 使用 Wiki
 
-这份文档面向接入方，覆盖 `kline_chart` 的完整使用方式：数据接入、图表渲染、指标配置、样式定制、数字格式化、右侧空白、交互行为和常见问题。
+这份文档面向接入方，覆盖 `kline_chart` 的完整使用方式：数据接入、图表渲染、指标配置、覆盖物、样式定制、数字格式化、右侧空白、交互行为和常见问题。
 
 ## 目录
 
@@ -13,6 +13,7 @@
 - [可视窗口、滚动和缩放](#可视窗口滚动和缩放)
 - [右侧预留空白](#右侧预留空白)
 - [数字格式化](#数字格式化)
+- [覆盖物和标记](#覆盖物和标记)
 - [样式定制](#样式定制)
 - [长按十字线和信息浮层](#长按十字线和信息浮层)
 - [分时图模式](#分时图模式)
@@ -47,6 +48,12 @@ import 'package:kline_chart/kline_chart.dart';
 - `KLineVolumeStyle`
 - `KLineCrosshairStyle`
 - `KLineInfoStyle`
+- `KLineOverlayStyle`
+- `KLineOverlay`
+- `KLinePriceLine`
+- `KLinePriceZone`
+- `KLineMarker`
+- `KLineVerticalLine`
 
 ## 最小接入流程
 
@@ -420,6 +427,55 @@ controller.indicatorFormatter = (value, type, period) {
 - 成交量默认按 `K`、`M`、`B` 做紧凑格式化。
 - 指标值默认使用 `toStringAsFixed(2)`。
 
+## 覆盖物和标记
+
+覆盖物是绘制在主图上的展示型业务标注，适合开仓价、止盈止损线、支撑阻力区间、买卖点和事件线。第一版不支持拖拽、编辑、吸附和命中测试，覆盖物价格也不会扩大主图价格缩放范围。
+
+```dart
+controller.setOverlays([
+  KLinePriceLine(
+    price: 64200,
+    label: 'Entry',
+    color: Colors.blue,
+  ),
+  KLinePriceZone(
+    fromPrice: 60000,
+    toPrice: 61000,
+    label: 'Support',
+    color: Colors.green,
+  ),
+  KLineMarker(
+    time: 1710000000000,
+    price: 63500,
+    type: KLineMarkerType.buy,
+  ),
+  KLineVerticalLine(
+    time: 1710000000000,
+    label: 'Event',
+    color: Colors.orange,
+  ),
+]);
+```
+
+覆盖物类型：
+
+| 类型 | 用途 |
+| --- | --- |
+| `KLinePriceLine` | 固定价格水平线 |
+| `KLinePriceZone` | 两个价格之间的填充区间 |
+| `KLineMarker` | 按 K 线时间和价格对齐的买点、卖点或自定义标记 |
+| `KLineVerticalLine` | 按 K 线时间对齐的事件竖线 |
+
+通过 controller 更新覆盖物：
+
+```dart
+controller.overlays = overlays;
+controller.setOverlays(overlays);
+controller.clearOverlays();
+```
+
+`KLineMarker` 和 `KLineVerticalLine` 会用 `time` 匹配 `KLineData.time`。如果找不到对应时间，或者标记在屏幕外，会安全跳过绘制。
+
 ## 样式定制
 
 样式按模块拆分在几个 style 类中：
@@ -449,6 +505,12 @@ controller.crosshairStyle = const KLineCrosshairStyle(
 controller.infoStyle = const KLineInfoStyle(
   backgroundColor: Color(0xee111827),
   textStyle: TextStyle(color: Color(0xffd1d5db), fontSize: 12),
+);
+
+controller.overlayStyle = const KLineOverlayStyle(
+  priceLineStrokeWidth: 1,
+  zoneOpacity: 0.12,
+  markerRadius: 6,
 );
 ```
 
@@ -757,6 +819,11 @@ controller.volumeFormatter = (value) {
 | `volumeStyle` | `KLineVolumeStyle` | `const KLineVolumeStyle()` | 成交量柱样式 |
 | `crosshairStyle` | `KLineCrosshairStyle` | `const KLineCrosshairStyle()` | 长按十字线样式 |
 | `infoStyle` | `KLineInfoStyle` | `const KLineInfoStyle()` | 长按详情浮层样式 |
+| `overlayStyle` | `KLineOverlayStyle` | `const KLineOverlayStyle()` | 展示型覆盖物样式 |
+| `overlays` | `List<KLineOverlay>` | `[]` | 主图展示型覆盖物 |
+| `setOverlays(overlays)` | `void` | - | 替换覆盖物并通知视图刷新 |
+| `clearOverlays()` | `void` | - | 清空覆盖物并通知视图刷新 |
+| `overlayVersion` | `int` | `0` | 每次覆盖物更新递增的版本号 |
 | `priceFormatter` | `KLineNumberFormatter?` | `null` | 价格格式化 |
 | `volumeFormatter` | `KLineNumberFormatter?` | `null` | 成交量格式化 |
 | `indicatorFormatter` | `KLineIndicatorFormatter?` | `null` | 指标值格式化 |
@@ -825,6 +892,18 @@ controller.volumeFormatter = (value) {
 | `KLineDataChangeType.append` | 右侧追加新 K 线 |
 | `KLineDataChangeType.prependHistory` | 左侧插入历史 K 线 |
 | `KLineDataChangeType.clear` | 清空数据 |
+
+### 覆盖物类型
+
+| 类型 | 主要字段 | 说明 |
+| --- | --- | --- |
+| `KLinePriceLine` | `price`, `label`, `color`, `strokeWidth` | 主图固定价格水平线 |
+| `KLinePriceZone` | `fromPrice`, `toPrice`, `label`, `color`, `opacity` | 主图价格填充区间 |
+| `KLineMarker` | `time`, `price`, `type`, `label`, `color`, `radius` | 按 K 线对齐的买点、卖点或自定义标记 |
+| `KLineVerticalLine` | `time`, `label`, `color`, `strokeWidth` | 按 K 线对齐的事件竖线 |
+| `KLineMarkerType.buy` | - | 买点标记 |
+| `KLineMarkerType.sell` | - | 卖点标记 |
+| `KLineMarkerType.custom` | - | 自定义标记 |
 
 ### `IndicatorType`
 
@@ -921,6 +1000,29 @@ controller.volumeFormatter = (value) {
 | --- | --- |
 | `backgroundColor` | 长按详情浮层背景色 |
 | `textStyle` | 长按详情浮层文字样式 |
+
+### `KLineOverlayStyle`
+
+| 属性 | 说明 |
+| --- | --- |
+| `priceLineColor` | 价格水平线默认颜色 |
+| `priceLineStrokeWidth` | 价格水平线默认宽度 |
+| `priceLineTextStyle` | 价格线标签文字样式 |
+| `priceLineLabelBackgroundColor` | 价格线标签背景色 |
+| `priceLineLabelPadding` | 价格线标签内边距 |
+| `priceLineLabelBorderRadius` | 价格线标签圆角 |
+| `zoneColor` | 价格区间默认填充色 |
+| `zoneOpacity` | 价格区间默认透明度 |
+| `zoneTextStyle` | 价格区间标签文字样式 |
+| `buyMarkerColor` | 买点标记默认颜色 |
+| `sellMarkerColor` | 卖点标记默认颜色 |
+| `customMarkerColor` | 自定义标记默认颜色 |
+| `markerTextColor` | 标记内部文字颜色 |
+| `markerRadius` | 标记默认半径 |
+| `markerTextStyle` | 标记标签文字样式 |
+| `verticalLineColor` | 事件竖线默认颜色 |
+| `verticalLineStrokeWidth` | 事件竖线默认宽度 |
+| `verticalLineTextStyle` | 事件竖线标签文字样式 |
 
 ## 常见问题
 

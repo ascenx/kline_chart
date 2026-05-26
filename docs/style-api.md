@@ -18,6 +18,12 @@ controller.candleStyle = const KLineCandleStyle(
   riseColor: Color(0xff22ab94),
   fallColor: Color(0xfff23645),
 );
+
+controller.overlayStyle = const KLineOverlayStyle(
+  priceLineStrokeWidth: 1,
+  zoneOpacity: 0.12,
+  markerRadius: 6,
+);
 ```
 
 ## Chart Style
@@ -124,6 +130,45 @@ controller.crosshairStyle = const KLineCrosshairStyle(
 controller.infoStyle = const KLineInfoStyle(
   backgroundColor: Color(0xee111827),
   textStyle: TextStyle(color: Color(0xffd1d5db), fontSize: 12),
+);
+```
+
+## Overlay Style
+
+`KLineOverlayStyle` controls display-only price lines, price zones, markers, and event lines.
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `priceLineColor` | `Color` | Default color for horizontal price lines. |
+| `priceLineStrokeWidth` | `double` | Default stroke width for horizontal price lines. |
+| `priceLineTextStyle` | `TextStyle` | Text style for price line labels. |
+| `priceLineLabelBackgroundColor` | `Color` | Background color for price line labels. |
+| `priceLineLabelPadding` | `EdgeInsets` | Padding around price line label text. |
+| `priceLineLabelBorderRadius` | `double` | Border radius for price line labels. |
+| `zoneColor` | `Color` | Default fill color for price zones. |
+| `zoneOpacity` | `double` | Default opacity for price zone fills. |
+| `zoneTextStyle` | `TextStyle` | Text style for price zone labels. |
+| `buyMarkerColor` | `Color` | Default color for buy markers. |
+| `sellMarkerColor` | `Color` | Default color for sell markers. |
+| `customMarkerColor` | `Color` | Default color for custom markers. |
+| `markerTextColor` | `Color` | Text color used inside markers. |
+| `markerRadius` | `double` | Default marker radius. |
+| `markerTextStyle` | `TextStyle` | Text style for marker labels. |
+| `verticalLineColor` | `Color` | Default color for vertical event lines. |
+| `verticalLineStrokeWidth` | `double` | Default stroke width for vertical event lines. |
+| `verticalLineTextStyle` | `TextStyle` | Text style for vertical event line labels. |
+
+```dart
+controller.overlayStyle = const KLineOverlayStyle(
+  priceLineColor: Color(0xff3b82f6),
+  priceLineStrokeWidth: 1,
+  zoneColor: Color(0xff22ab94),
+  zoneOpacity: 0.12,
+  buyMarkerColor: Color(0xff22ab94),
+  sellMarkerColor: Color(0xfff23645),
+  markerRadius: 6,
+  verticalLineColor: Color(0xfff59e0b),
+  verticalLineStrokeWidth: 1,
 );
 ```
 

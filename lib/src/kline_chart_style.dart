@@ -330,3 +330,195 @@ class KLineInfoStyle {
   @override
   int get hashCode => Object.hash(backgroundColor, textStyle);
 }
+
+/// Visual styling for display-only chart overlays.
+class KLineOverlayStyle {
+  /// Default color for horizontal price lines.
+  final Color priceLineColor;
+
+  /// Default stroke width for horizontal price lines.
+  final double priceLineStrokeWidth;
+
+  /// Text style for price line labels.
+  final TextStyle priceLineTextStyle;
+
+  /// Background color for price line labels.
+  final Color priceLineLabelBackgroundColor;
+
+  /// Padding around price line label text.
+  final EdgeInsets priceLineLabelPadding;
+
+  /// Border radius for price line labels.
+  final double priceLineLabelBorderRadius;
+
+  /// Default fill color for price zones.
+  final Color zoneColor;
+
+  /// Default opacity for price zone fills.
+  final double zoneOpacity;
+
+  /// Text style for price zone labels.
+  final TextStyle zoneTextStyle;
+
+  /// Default color for buy markers.
+  final Color buyMarkerColor;
+
+  /// Default color for sell markers.
+  final Color sellMarkerColor;
+
+  /// Default color for custom markers.
+  final Color customMarkerColor;
+
+  /// Text color used inside markers.
+  final Color markerTextColor;
+
+  /// Default marker radius.
+  final double markerRadius;
+
+  /// Text style for marker labels.
+  final TextStyle markerTextStyle;
+
+  /// Default color for vertical event lines.
+  final Color verticalLineColor;
+
+  /// Default stroke width for vertical event lines.
+  final double verticalLineStrokeWidth;
+
+  /// Text style for vertical event line labels.
+  final TextStyle verticalLineTextStyle;
+
+  /// Creates display-only overlay visual styling.
+  const KLineOverlayStyle({
+    this.priceLineColor = Colors.blue,
+    this.priceLineStrokeWidth = 1.0,
+    this.priceLineTextStyle = const TextStyle(
+      color: Colors.white,
+      fontSize: 10.0,
+      height: 1.0,
+    ),
+    this.priceLineLabelBackgroundColor = Colors.blue,
+    this.priceLineLabelPadding =
+        const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+    this.priceLineLabelBorderRadius = 3.0,
+    this.zoneColor = Colors.blue,
+    this.zoneOpacity = 0.12,
+    this.zoneTextStyle = const TextStyle(
+      color: Colors.blue,
+      fontSize: 10.0,
+      height: 1.0,
+    ),
+    this.buyMarkerColor = Colors.green,
+    this.sellMarkerColor = Colors.red,
+    this.customMarkerColor = Colors.blue,
+    this.markerTextColor = Colors.white,
+    this.markerRadius = 6.0,
+    this.markerTextStyle = const TextStyle(
+      color: Colors.white,
+      fontSize: 10.0,
+      height: 1.0,
+      fontWeight: FontWeight.w600,
+    ),
+    this.verticalLineColor = Colors.blueGrey,
+    this.verticalLineStrokeWidth = 1.0,
+    this.verticalLineTextStyle = const TextStyle(
+      color: Colors.blueGrey,
+      fontSize: 10.0,
+      height: 1.0,
+    ),
+  });
+
+  /// Returns a copy with selected values replaced.
+  KLineOverlayStyle copyWith({
+    Color? priceLineColor,
+    double? priceLineStrokeWidth,
+    TextStyle? priceLineTextStyle,
+    Color? priceLineLabelBackgroundColor,
+    EdgeInsets? priceLineLabelPadding,
+    double? priceLineLabelBorderRadius,
+    Color? zoneColor,
+    double? zoneOpacity,
+    TextStyle? zoneTextStyle,
+    Color? buyMarkerColor,
+    Color? sellMarkerColor,
+    Color? customMarkerColor,
+    Color? markerTextColor,
+    double? markerRadius,
+    TextStyle? markerTextStyle,
+    Color? verticalLineColor,
+    double? verticalLineStrokeWidth,
+    TextStyle? verticalLineTextStyle,
+  }) {
+    return KLineOverlayStyle(
+      priceLineColor: priceLineColor ?? this.priceLineColor,
+      priceLineStrokeWidth: priceLineStrokeWidth ?? this.priceLineStrokeWidth,
+      priceLineTextStyle: priceLineTextStyle ?? this.priceLineTextStyle,
+      priceLineLabelBackgroundColor:
+          priceLineLabelBackgroundColor ?? this.priceLineLabelBackgroundColor,
+      priceLineLabelPadding:
+          priceLineLabelPadding ?? this.priceLineLabelPadding,
+      priceLineLabelBorderRadius:
+          priceLineLabelBorderRadius ?? this.priceLineLabelBorderRadius,
+      zoneColor: zoneColor ?? this.zoneColor,
+      zoneOpacity: zoneOpacity ?? this.zoneOpacity,
+      zoneTextStyle: zoneTextStyle ?? this.zoneTextStyle,
+      buyMarkerColor: buyMarkerColor ?? this.buyMarkerColor,
+      sellMarkerColor: sellMarkerColor ?? this.sellMarkerColor,
+      customMarkerColor: customMarkerColor ?? this.customMarkerColor,
+      markerTextColor: markerTextColor ?? this.markerTextColor,
+      markerRadius: markerRadius ?? this.markerRadius,
+      markerTextStyle: markerTextStyle ?? this.markerTextStyle,
+      verticalLineColor: verticalLineColor ?? this.verticalLineColor,
+      verticalLineStrokeWidth:
+          verticalLineStrokeWidth ?? this.verticalLineStrokeWidth,
+      verticalLineTextStyle:
+          verticalLineTextStyle ?? this.verticalLineTextStyle,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is KLineOverlayStyle &&
+            other.priceLineColor == priceLineColor &&
+            other.priceLineStrokeWidth == priceLineStrokeWidth &&
+            other.priceLineTextStyle == priceLineTextStyle &&
+            other.priceLineLabelBackgroundColor ==
+                priceLineLabelBackgroundColor &&
+            other.priceLineLabelPadding == priceLineLabelPadding &&
+            other.priceLineLabelBorderRadius == priceLineLabelBorderRadius &&
+            other.zoneColor == zoneColor &&
+            other.zoneOpacity == zoneOpacity &&
+            other.zoneTextStyle == zoneTextStyle &&
+            other.buyMarkerColor == buyMarkerColor &&
+            other.sellMarkerColor == sellMarkerColor &&
+            other.customMarkerColor == customMarkerColor &&
+            other.markerTextColor == markerTextColor &&
+            other.markerRadius == markerRadius &&
+            other.markerTextStyle == markerTextStyle &&
+            other.verticalLineColor == verticalLineColor &&
+            other.verticalLineStrokeWidth == verticalLineStrokeWidth &&
+            other.verticalLineTextStyle == verticalLineTextStyle;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+        priceLineColor,
+        priceLineStrokeWidth,
+        priceLineTextStyle,
+        priceLineLabelBackgroundColor,
+        priceLineLabelPadding,
+        priceLineLabelBorderRadius,
+        zoneColor,
+        zoneOpacity,
+        zoneTextStyle,
+        buyMarkerColor,
+        sellMarkerColor,
+        customMarkerColor,
+        markerTextColor,
+        markerRadius,
+        markerTextStyle,
+        verticalLineColor,
+        verticalLineStrokeWidth,
+        verticalLineTextStyle,
+      );
+}

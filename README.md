@@ -24,6 +24,8 @@ It is designed for crypto, stock, and trading-related apps that need a customiza
 - Data lifecycle APIs for initial data, real-time last-candle updates, appends,
   prepended history, and automatic chart refresh.
 - Optional `onLoadMore` callback for loading older candles near the leading edge.
+- Display-only overlays for price lines, price zones, candle markers, and event
+  lines.
 - Rendering stability for short data sets, flat price data, and zero volume data.
 
 ## Installation
@@ -143,6 +145,40 @@ KLineView(
     controller.prependHistory(olderCandles);
   },
 )
+```
+
+## Overlays And Markers
+
+Use overlays to display business annotations such as entry prices, support
+zones, buy or sell markers, and event lines. Overlays are display-only and do
+not change the chart's price scale.
+
+```dart
+controller.setOverlays([
+  KLinePriceLine(
+    price: 64200,
+    label: 'Entry',
+    color: Colors.blue,
+  ),
+  KLinePriceZone(
+    fromPrice: 60000,
+    toPrice: 61000,
+    label: 'Support',
+    color: Colors.green,
+  ),
+  KLineMarker(
+    time: 1710000000000,
+    price: 63500,
+    type: KLineMarkerType.buy,
+  ),
+  KLineVerticalLine(
+    time: 1710000000000,
+    label: 'Event',
+    color: Colors.orange,
+  ),
+]);
+
+controller.clearOverlays();
 ```
 
 ## Indicator Configuration

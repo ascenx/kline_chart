@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import './kline_chart_style.dart';
 import './kline_data.dart';
+import './kline_overlay.dart';
 
 enum IndicatorType {
   // main
@@ -89,10 +90,15 @@ class KLineDataChange {
 
 class KLineController extends ChangeNotifier {
   List<KLineData> _data = [];
+  List<KLineOverlay> _overlays = const [];
 
   List<KLineData> get data => _data;
 
   set data(List<KLineData> value) => setData(value, resetView: false);
+
+  List<KLineOverlay> get overlays => _overlays;
+
+  set overlays(List<KLineOverlay> value) => setOverlays(value);
 
   KLineDataChange? _lastDataChange;
 
@@ -101,6 +107,10 @@ class KLineController extends ChangeNotifier {
   int _dataVersion = 0;
 
   int get dataVersion => _dataVersion;
+
+  int _overlayVersion = 0;
+
+  int get overlayVersion => _overlayVersion;
 
   void setData(List<KLineData> value, {bool resetView = true}) {
     final previousLength = _data.length;
@@ -168,11 +178,23 @@ class KLineController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setOverlays(List<KLineOverlay> value) {
+    _overlays = List<KLineOverlay>.unmodifiable(value);
+    _overlayVersion += 1;
+    notifyListeners();
+  }
+
+  void clearOverlays() {
+    if (_overlays.isEmpty) return;
+    setOverlays(const []);
+  }
+
   KLineChartStyle chartStyle = const KLineChartStyle();
   KLineCandleStyle candleStyle = const KLineCandleStyle();
   KLineVolumeStyle volumeStyle = const KLineVolumeStyle();
   KLineCrosshairStyle crosshairStyle = const KLineCrosshairStyle();
   KLineInfoStyle infoStyle = const KLineInfoStyle();
+  KLineOverlayStyle overlayStyle = const KLineOverlayStyle();
 
   /// Formats price values such as open, high, low, close, rulers, and markers.
   KLineNumberFormatter? priceFormatter;

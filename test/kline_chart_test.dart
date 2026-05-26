@@ -37,6 +37,8 @@ void main() {
     KLineController.shared.volumeStyle = const KLineVolumeStyle();
     KLineController.shared.crosshairStyle = const KLineCrosshairStyle();
     KLineController.shared.infoStyle = const KLineInfoStyle();
+    KLineController.shared.overlayStyle = const KLineOverlayStyle();
+    KLineController.shared.clearOverlays();
     KLineController.shared.sarStart = 0.02;
     KLineController.shared.sarIncrement = 0.02;
     KLineController.shared.sarMax = 0.2;
@@ -205,6 +207,37 @@ void main() {
 
       expect(controller.data, [same(candle)]);
       expect(controller.lastDataChange?.type, KLineDataChangeType.append);
+    });
+
+    test('overlay updates notify listeners without changing data version', () {
+      final controller = KLineController();
+      controller.setData(_buildKLineData(2));
+      final dataVersion = controller.dataVersion;
+
+      var notifyCount = 0;
+      controller.addListener(() {
+        notifyCount += 1;
+      });
+
+      final overlay = KLinePriceLine(
+        price: 12,
+        label: 'Entry',
+        color: Colors.blue,
+      );
+
+      controller.setOverlays([overlay]);
+
+      expect(controller.overlays, [overlay]);
+      expect(controller.overlayVersion, 1);
+      expect(controller.dataVersion, dataVersion);
+      expect(notifyCount, 1);
+
+      controller.clearOverlays();
+
+      expect(controller.overlays, isEmpty);
+      expect(controller.overlayVersion, 2);
+      expect(controller.dataVersion, dataVersion);
+      expect(notifyCount, 2);
     });
   });
 
@@ -438,6 +471,36 @@ void main() {
       expect(newPainter.shouldRepaint(oldPainter), isTrue);
     });
 
+    test('repaints when overlays change', () {
+      KLineController.shared.clearOverlays();
+      final oldPainter = KLinePainter(const [], 10);
+
+      KLineController.shared.setOverlays([
+        KLinePriceLine(
+          price: 12,
+          label: 'Entry',
+          color: Colors.blue,
+        )
+      ]);
+      final newPainter = KLinePainter(const [], 10);
+
+      expect(newPainter.shouldRepaint(oldPainter), isTrue);
+    });
+
+    test('repaints when overlay style changes', () {
+      KLineController.shared.overlayStyle = const KLineOverlayStyle(
+        priceLineColor: Colors.blue,
+      );
+      final oldPainter = KLinePainter(const [], 10);
+
+      KLineController.shared.overlayStyle = const KLineOverlayStyle(
+        priceLineColor: Colors.orange,
+      );
+      final newPainter = KLinePainter(const [], 10);
+
+      expect(newPainter.shouldRepaint(oldPainter), isTrue);
+    });
+
     test('uses chart and candle styles while painting the main chart',
         () async {
       KLineController.shared.itemCount = 1;
@@ -495,6 +558,187 @@ void main() {
       await tester.pump();
 
       expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('KLine overlay rendering', () {
+    test('renders price line at the expected price y coordinate', () async {
+      KLineController.shared.itemCount = 1;
+      KLineController.shared.spacing = 0;
+      KLineController.shared.showMainIndicators = [];
+      KLineController.shared.showSubIndicators = [];
+      KLineController.shared.setOverlays([
+        KLinePriceLine(
+          price: 15,
+          color: const Color(0xff3366ff),
+          strokeWidth: 3,
+        )
+      ]);
+
+      final data = [
+        KLineData(
+          open: 12,
+          high: 20,
+          low: 10,
+          close: 14,
+          volume: 1,
+          time: 0,
+        )
+      ];
+      final bytes = await _paintToBytes(
+        const Size(100, 100),
+        (canvas, size) => KLinePainter(data, 0).paint(canvas, size),
+      );
+
+      expect(_pixelAt(bytes, 10, 50, 100), const Color(0xff3366ff));
+    });
+
+    test('renders marker at the matching candle center x coordinate', () async {
+      KLineController.shared.itemCount = 3;
+      KLineController.shared.spacing = 0;
+      KLineController.shared.showMainIndicators = [];
+      KLineController.shared.showSubIndicators = [];
+      KLineController.shared.setOverlays([
+        KLineMarker(
+          time: 1,
+          price: 15,
+          color: const Color(0xff00aaff),
+          radius: 6,
+        )
+      ]);
+
+      final data = [
+        KLineData(open: 12, high: 20, low: 10, close: 12, volume: 1, time: 0),
+        KLineData(open: 12, high: 20, low: 10, close: 12, volume: 1, time: 1),
+        KLineData(open: 12, high: 20, low: 10, close: 12, volume: 1, time: 2),
+      ];
+      final bytes = await _paintToBytes(
+        const Size(300, 100),
+        (canvas, size) => KLinePainter(data, 0).paint(canvas, size),
+      );
+
+      expect(_pixelAt(bytes, 150, 50, 300), const Color(0xff00aaff));
+    });
+
+    test('keeps top-edge sell markers fully visible', () async {
+      KLineController.shared.itemCount = 1;
+      KLineController.shared.spacing = 0;
+      KLineController.shared.showMainIndicators = [];
+      KLineController.shared.showSubIndicators = [];
+      KLineController.shared.setOverlays([
+        KLineMarker(
+          time: 0,
+          price: 20,
+          type: KLineMarkerType.sell,
+          color: const Color(0xffdd2222),
+          radius: 6,
+        )
+      ]);
+
+      final data = [
+        KLineData(
+          open: 12,
+          high: 20,
+          low: 10,
+          close: 14,
+          volume: 1,
+          time: 0,
+        )
+      ];
+      final bytes = await _paintToBytes(
+        const Size(100, 100),
+        (canvas, size) => KLinePainter(data, 0).paint(canvas, size),
+      );
+
+      final markerPixel = _pixelAt(bytes, 44, 10, 100).toARGB32();
+      expect((markerPixel >> 16) & 0xff, greaterThan(200));
+      expect((markerPixel >> 8) & 0xff, lessThan(120));
+      expect(markerPixel & 0xff, lessThan(120));
+    });
+
+    test('aligns time overlays to the first candle with a matching time',
+        () async {
+      KLineController.shared.itemCount = 3;
+      KLineController.shared.spacing = 0;
+      KLineController.shared.showMainIndicators = [];
+      KLineController.shared.showSubIndicators = [];
+      KLineController.shared.setOverlays([
+        KLineMarker(
+          time: 1,
+          price: 15,
+          color: const Color(0xff00aaff),
+          radius: 6,
+        )
+      ]);
+
+      final data = [
+        KLineData(open: 12, high: 20, low: 10, close: 12, volume: 1, time: 1),
+        KLineData(open: 12, high: 20, low: 10, close: 12, volume: 1, time: 1),
+        KLineData(open: 12, high: 20, low: 10, close: 12, volume: 1, time: 2),
+      ];
+      final bytes = await _paintToBytes(
+        const Size(300, 100),
+        (canvas, size) => KLinePainter(data, 0).paint(canvas, size),
+      );
+
+      expect(_pixelAt(bytes, 50, 50, 300), const Color(0xff00aaff));
+    });
+
+    test('renders price zone and vertical line overlays', () async {
+      KLineController.shared.itemCount = 3;
+      KLineController.shared.spacing = 0;
+      KLineController.shared.showMainIndicators = [];
+      KLineController.shared.showSubIndicators = [];
+      KLineController.shared.overlayStyle = const KLineOverlayStyle(
+        zoneOpacity: 1,
+      );
+      KLineController.shared.setOverlays([
+        KLinePriceZone(
+          fromPrice: 14,
+          toPrice: 16,
+          color: const Color(0xff22cc88),
+        ),
+        KLineVerticalLine(
+          time: 1,
+          color: const Color(0xffaa33ff),
+          strokeWidth: 3,
+        ),
+      ]);
+
+      final data = [
+        KLineData(open: 12, high: 20, low: 10, close: 12, volume: 1, time: 0),
+        KLineData(open: 12, high: 20, low: 10, close: 12, volume: 1, time: 1),
+        KLineData(open: 12, high: 20, low: 10, close: 12, volume: 1, time: 2),
+      ];
+      final bytes = await _paintToBytes(
+        const Size(300, 100),
+        (canvas, size) => KLinePainter(data, 0).paint(canvas, size),
+      );
+
+      expect(_pixelAt(bytes, 10, 50, 300), const Color(0xff22cc88));
+      expect(_pixelAt(bytes, 150, 10, 300), const Color(0xffaa33ff));
+    });
+
+    test('skips unmatched time overlays without throwing', () async {
+      KLineController.shared.itemCount = 3;
+      KLineController.shared.spacing = 0;
+      KLineController.shared.showMainIndicators = [];
+      KLineController.shared.showSubIndicators = [];
+      KLineController.shared.setOverlays([
+        KLineMarker(time: 999, price: 15),
+        KLineVerticalLine(time: 999),
+      ]);
+
+      final data = [
+        KLineData(open: 12, high: 20, low: 10, close: 12, volume: 1, time: 0),
+        KLineData(open: 12, high: 20, low: 10, close: 12, volume: 1, time: 1),
+        KLineData(open: 12, high: 20, low: 10, close: 12, volume: 1, time: 2),
+      ];
+
+      await _paintToBytes(
+        const Size(300, 100),
+        (canvas, size) => KLinePainter(data, 0).paint(canvas, size),
+      );
     });
   });
 
@@ -664,6 +908,53 @@ void main() {
       await tester.pump();
 
       controller.prependHistory(_buildKLineData(5));
+      await tester.pump();
+      await tester.pump();
+
+      expect(scrollController.offset, closeTo(450, 0.000001));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('overlay updates do not replay the last data lifecycle change',
+        (tester) async {
+      final controller = KLineController()
+        ..data = _buildKLineData(40)
+        ..itemCount = 10
+        ..trailingBlankItemCount = 0
+        ..maxTrailingBlankItemCount = 0
+        ..showMainIndicators = []
+        ..showSubIndicators = [];
+
+      await tester.pumpWidget(MaterialApp(
+        home: Center(
+          child: SizedBox(
+            width: 300,
+            height: 240,
+            child: KLineView(controller: controller),
+          ),
+        ),
+      ));
+      await tester.pump();
+
+      final scrollController = tester
+          .widget<SingleChildScrollView>(find.byType(SingleChildScrollView))
+          .controller!;
+      scrollController.jumpTo(300);
+      await tester.pump();
+
+      controller.prependHistory(_buildKLineData(5));
+      await tester.pump();
+      await tester.pump();
+
+      expect(scrollController.offset, closeTo(450, 0.000001));
+
+      controller.setOverlays([
+        KLinePriceLine(
+          price: 12,
+          label: 'Entry',
+          color: Colors.blue,
+        )
+      ]);
       await tester.pump();
       await tester.pump();
 

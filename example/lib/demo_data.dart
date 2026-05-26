@@ -20,3 +20,66 @@ Future<List<KLineData>> loadDemoKLineData() async {
   }
   return dataList;
 }
+
+List<KLineOverlay> buildDemoOverlays(List<KLineData> dataList) {
+  if (dataList.length < 8) {
+    return const [];
+  }
+
+  final visibleWindow = dataList.length > 30
+      ? dataList.sublist(dataList.length - 30)
+      : List<KLineData>.of(dataList);
+  var highest = visibleWindow.first.high;
+  var lowest = visibleWindow.first.low;
+  for (final item in visibleWindow) {
+    if (item.high > highest) highest = item.high;
+    if (item.low < lowest) lowest = item.low;
+  }
+
+  final range = (highest - lowest).abs();
+  final zoneHeight = range == 0 ? lowest * 0.01 : range * 0.08;
+  final supportFrom = lowest;
+  final supportTo = lowest + zoneHeight;
+  final entryIndex = _safeIndex(dataList, dataList.length - 18);
+  final buyIndex = _safeIndex(dataList, dataList.length - 24);
+  final sellIndex = _safeIndex(dataList, dataList.length - 8);
+  final eventIndex = _safeIndex(dataList, dataList.length - 13);
+
+  return [
+    KLinePriceLine(
+      price: dataList[entryIndex].close,
+      label: 'Entry',
+      color: const Color(0xff2563eb),
+    ),
+    KLinePriceZone(
+      fromPrice: supportFrom,
+      toPrice: supportTo,
+      label: 'Support',
+      color: const Color(0xff16a34a),
+      opacity: 0.14,
+    ),
+    KLineMarker(
+      time: dataList[buyIndex].time,
+      price: dataList[buyIndex].low,
+      type: KLineMarkerType.buy,
+      color: const Color(0xff16a34a),
+    ),
+    KLineMarker(
+      time: dataList[sellIndex].time,
+      price: dataList[sellIndex].high,
+      type: KLineMarkerType.sell,
+      color: const Color(0xffdc2626),
+    ),
+    KLineVerticalLine(
+      time: dataList[eventIndex].time,
+      label: 'Event',
+      color: const Color(0xfff59e0b),
+    ),
+  ];
+}
+
+int _safeIndex(List<KLineData> dataList, int index) {
+  if (index < 0) return 0;
+  if (index >= dataList.length) return dataList.length - 1;
+  return index;
+}

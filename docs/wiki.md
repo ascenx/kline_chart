@@ -1,6 +1,6 @@
 # KLine Chart Usage Wiki
 
-This document covers the full usage surface of `kline_chart`: data setup, chart rendering, indicator configuration, styles, number formatting, trailing blank space, interactions, dynamic updates, edge cases, and public API references.
+This document covers the full usage surface of `kline_chart`: data setup, chart rendering, indicator configuration, overlays, styles, number formatting, trailing blank space, interactions, dynamic updates, edge cases, and public API references.
 
 ## Table Of Contents
 
@@ -14,6 +14,7 @@ This document covers the full usage surface of `kline_chart`: data setup, chart 
 - [Visible Window, Scroll, And Zoom](#visible-window-scroll-and-zoom)
 - [Trailing Blank Space](#trailing-blank-space)
 - [Number Formatting](#number-formatting)
+- [Overlays And Markers](#overlays-and-markers)
 - [Style Customization](#style-customization)
 - [Chart Layout](#chart-layout)
 - [Long Press Crosshair And Info Overlay](#long-press-crosshair-and-info-overlay)
@@ -49,6 +50,12 @@ The main package exports these public APIs:
 - `KLineVolumeStyle`
 - `KLineCrosshairStyle`
 - `KLineInfoStyle`
+- `KLineOverlayStyle`
+- `KLineOverlay`
+- `KLinePriceLine`
+- `KLinePriceZone`
+- `KLineMarker`
+- `KLineVerticalLine`
 
 ## Minimal Setup
 
@@ -428,6 +435,60 @@ Default formatting:
 - Volumes use compact `K`, `M`, and `B` suffixes.
 - Indicator values use `toStringAsFixed(2)`.
 
+## Overlays And Markers
+
+Overlays are display-only annotations on the main chart. They are useful for
+entry prices, stop-loss lines, support or resistance zones, trade markers, and
+event lines. The first version does not support dragging or editing overlays,
+and overlay prices do not expand the chart's price scale.
+
+```dart
+controller.setOverlays([
+  KLinePriceLine(
+    price: 64200,
+    label: 'Entry',
+    color: Colors.blue,
+  ),
+  KLinePriceZone(
+    fromPrice: 60000,
+    toPrice: 61000,
+    label: 'Support',
+    color: Colors.green,
+  ),
+  KLineMarker(
+    time: 1710000000000,
+    price: 63500,
+    type: KLineMarkerType.buy,
+  ),
+  KLineVerticalLine(
+    time: 1710000000000,
+    label: 'Event',
+    color: Colors.orange,
+  ),
+]);
+```
+
+Overlay types:
+
+| Type | Purpose |
+| --- | --- |
+| `KLinePriceLine` | Horizontal line at a fixed price |
+| `KLinePriceZone` | Filled price range between two prices |
+| `KLineMarker` | Buy, sell, or custom marker aligned to a candle time and price |
+| `KLineVerticalLine` | Vertical event line aligned to a candle time |
+
+Update overlays through the controller:
+
+```dart
+controller.overlays = overlays;
+controller.setOverlays(overlays);
+controller.clearOverlays();
+```
+
+`KLineMarker` and `KLineVerticalLine` match `time` to `KLineData.time`. If the
+time does not exist in the data list or the marker is off-screen, the overlay is
+skipped safely.
+
 ## Style Customization
 
 Styles are grouped into separate style classes:
@@ -457,6 +518,12 @@ controller.crosshairStyle = const KLineCrosshairStyle(
 controller.infoStyle = const KLineInfoStyle(
   backgroundColor: Color(0xee111827),
   textStyle: TextStyle(color: Color(0xffd1d5db), fontSize: 12),
+);
+
+controller.overlayStyle = const KLineOverlayStyle(
+  priceLineStrokeWidth: 1,
+  zoneOpacity: 0.12,
+  markerRadius: 6,
 );
 ```
 
@@ -768,6 +835,11 @@ controller.volumeFormatter = (value) {
 | `volumeStyle` | `KLineVolumeStyle` | `const KLineVolumeStyle()` | Volume bar style |
 | `crosshairStyle` | `KLineCrosshairStyle` | `const KLineCrosshairStyle()` | Long-press crosshair style |
 | `infoStyle` | `KLineInfoStyle` | `const KLineInfoStyle()` | Long-press detail overlay style |
+| `overlayStyle` | `KLineOverlayStyle` | `const KLineOverlayStyle()` | Display-only overlay style |
+| `overlays` | `List<KLineOverlay>` | `[]` | Display-only overlays on the main chart |
+| `setOverlays(overlays)` | `void` | - | Replaces overlays and notifies the view |
+| `clearOverlays()` | `void` | - | Clears overlays and notifies the view |
+| `overlayVersion` | `int` | `0` | Monotonic version incremented for each overlay update |
 | `priceFormatter` | `KLineNumberFormatter?` | `null` | Price formatter |
 | `volumeFormatter` | `KLineNumberFormatter?` | `null` | Volume formatter |
 | `indicatorFormatter` | `KLineIndicatorFormatter?` | `null` | Indicator value formatter |
@@ -836,6 +908,18 @@ controller.volumeFormatter = (value) {
 | `KLineDataChangeType.append` | New candle appended to the right |
 | `KLineDataChangeType.prependHistory` | Older candles inserted at the left |
 | `KLineDataChangeType.clear` | Data cleared |
+
+### Overlay Types
+
+| Type | Important Fields | Description |
+| --- | --- | --- |
+| `KLinePriceLine` | `price`, `label`, `color`, `strokeWidth` | Horizontal price line on the main chart |
+| `KLinePriceZone` | `fromPrice`, `toPrice`, `label`, `color`, `opacity` | Filled price range on the main chart |
+| `KLineMarker` | `time`, `price`, `type`, `label`, `color`, `radius` | Buy, sell, or custom marker aligned to a candle |
+| `KLineVerticalLine` | `time`, `label`, `color`, `strokeWidth` | Vertical event line aligned to a candle |
+| `KLineMarkerType.buy` | - | Buy marker type |
+| `KLineMarkerType.sell` | - | Sell marker type |
+| `KLineMarkerType.custom` | - | Custom marker type |
 
 ### `IndicatorType`
 
@@ -932,6 +1016,29 @@ These properties are mainly for drawing-area debugging. App integrations usually
 | --- | --- |
 | `backgroundColor` | Long-press detail overlay background color |
 | `textStyle` | Long-press detail overlay text style |
+
+### `KLineOverlayStyle`
+
+| Property | Description |
+| --- | --- |
+| `priceLineColor` | Default color for horizontal price lines |
+| `priceLineStrokeWidth` | Default stroke width for horizontal price lines |
+| `priceLineTextStyle` | Text style for price line labels |
+| `priceLineLabelBackgroundColor` | Background color for price line labels |
+| `priceLineLabelPadding` | Padding around price line label text |
+| `priceLineLabelBorderRadius` | Border radius for price line labels |
+| `zoneColor` | Default fill color for price zones |
+| `zoneOpacity` | Default opacity for price zone fills |
+| `zoneTextStyle` | Text style for price zone labels |
+| `buyMarkerColor` | Default color for buy markers |
+| `sellMarkerColor` | Default color for sell markers |
+| `customMarkerColor` | Default color for custom markers |
+| `markerTextColor` | Text color used inside markers |
+| `markerRadius` | Default marker radius |
+| `markerTextStyle` | Text style for marker labels |
+| `verticalLineColor` | Default color for vertical event lines |
+| `verticalLineStrokeWidth` | Default stroke width for vertical event lines |
+| `verticalLineTextStyle` | Text style for vertical event line labels |
 
 ## FAQ
 

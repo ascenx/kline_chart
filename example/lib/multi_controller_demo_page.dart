@@ -50,6 +50,13 @@ class _MultiControllerDemoPageState extends State<MultiControllerDemoPage> {
         riseColor: Color(0x6622ab94),
         fallColor: Color(0x66f23645),
       )
+      ..overlayStyle = const KLineOverlayStyle(
+        priceLineColor: Color(0xff60a5fa),
+        priceLineStrokeWidth: 1,
+        zoneOpacity: 0.16,
+        markerRadius: 6,
+        verticalLineColor: Color(0xfffbbf24),
+      )
       ..indicatorColors = [
         Colors.orange,
         Colors.purple,
@@ -97,6 +104,13 @@ class _MultiControllerDemoPageState extends State<MultiControllerDemoPage> {
         riseColor: Color(0x5516a34a),
         fallColor: Color(0x55dc2626),
       )
+      ..overlayStyle = const KLineOverlayStyle(
+        priceLineColor: Color(0xff2563eb),
+        priceLineStrokeWidth: 1,
+        zoneOpacity: 0.12,
+        markerRadius: 6,
+        verticalLineColor: Color(0xffea580c),
+      )
       ..indicatorColors = [
         const Color(0xff2563eb),
         const Color(0xff9333ea),
@@ -104,8 +118,11 @@ class _MultiControllerDemoPageState extends State<MultiControllerDemoPage> {
       ];
 
     loadDemoKLineData().then((data) {
+      final overlays = buildDemoOverlays(data);
       _trendController.setData(data);
+      _trendController.setOverlays(overlays);
       _momentumController.setData(List<KLineData>.of(data));
+      _momentumController.setOverlays(overlays);
       setState(() {
         _loaded = true;
       });

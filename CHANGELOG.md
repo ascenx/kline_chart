@@ -20,6 +20,7 @@
 - Fix MACD leading histogram rendering so the first visible bar keeps the correct hollow or filled style.
 - Improve chart drawing performance by reusing indicator info painters, batching paths, reducing repaint overhead, and adding benchmark coverage.
 - Add API and style documentation for advanced controller-based customization.
+- Add display-only main chart overlays for price lines, price zones, candle markers, and event lines.
 
 ## 0.0.1+4
 

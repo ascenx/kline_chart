@@ -11,6 +11,8 @@ import './indicators/macd_painter.dart';
 import './indicators/sar_painter.dart';
 import './indicators/vol_painter.dart';
 import './kline_data.dart';
+import './kline_overlay.dart';
+import './kline_overlay_painter.dart';
 
 class KLinePainter extends CustomPainter {
   final List<KLineData> klineData;
@@ -19,10 +21,12 @@ class KLinePainter extends CustomPainter {
   final KLineChartStyle _chartStyle;
   final KLineCandleStyle _candleStyle;
   final KLineVolumeStyle _volumeStyle;
+  final KLineOverlayStyle _overlayStyle;
   final KLineNumberFormatter? _priceFormatter;
   final KLineNumberFormatter? _volumeFormatter;
   final KLineIndicatorFormatter? _indicatorFormatter;
   final List<Color> _indicatorColors;
+  final List<KLineOverlay> _overlays;
   final Color _sarColor;
   final KLineIndicatorDataCache _indicatorDataCache;
 
@@ -33,6 +37,7 @@ class KLinePainter extends CustomPainter {
         _chartStyle = (controller ?? KLineController.shared).chartStyle,
         _candleStyle = (controller ?? KLineController.shared).candleStyle,
         _volumeStyle = (controller ?? KLineController.shared).volumeStyle,
+        _overlayStyle = (controller ?? KLineController.shared).overlayStyle,
         _priceFormatter = (controller ?? KLineController.shared).priceFormatter,
         _volumeFormatter =
             (controller ?? KLineController.shared).volumeFormatter,
@@ -40,6 +45,8 @@ class KLinePainter extends CustomPainter {
             (controller ?? KLineController.shared).indicatorFormatter,
         _indicatorColors = List<Color>.of(
             (controller ?? KLineController.shared).indicatorColors),
+        _overlays = List<KLineOverlay>.of(
+            (controller ?? KLineController.shared).overlays),
         _sarColor = (controller ?? KLineController.shared).sarColor,
         _indicatorDataCache = indicatorDataCache ??
             KLineIndicatorDataCache(klineData, beginIdx,
@@ -493,6 +500,22 @@ class KLinePainter extends CustomPainter {
       );
     }
 
+    KLineOverlayPainter.paint(
+      canvas: canvas,
+      size: size,
+      data: klineData,
+      overlays: _overlays,
+      beginIndex: beginIdx,
+      itemWidth: itemW,
+      spacing: spacing,
+      highest: highest,
+      lowest: lowest,
+      top: mainTopMargin,
+      height: mainHeight,
+      style: _overlayStyle,
+      formatPrice: controller.formatPrice,
+    );
+
     // draw sub indicator
     double indicatorH = controller.subIndicatorHeight;
 
@@ -765,10 +788,12 @@ class KLinePainter extends CustomPainter {
         oldDelegate._chartStyle != _chartStyle ||
         oldDelegate._candleStyle != _candleStyle ||
         oldDelegate._volumeStyle != _volumeStyle ||
+        oldDelegate._overlayStyle != _overlayStyle ||
         oldDelegate._priceFormatter != _priceFormatter ||
         oldDelegate._volumeFormatter != _volumeFormatter ||
         oldDelegate._indicatorFormatter != _indicatorFormatter ||
         !listEquals(oldDelegate._indicatorColors, _indicatorColors) ||
+        !listEquals(oldDelegate._overlays, _overlays) ||
         oldDelegate._sarColor != _sarColor;
   }
 }
