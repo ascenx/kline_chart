@@ -36,7 +36,7 @@ class VolPainter {
   final Path _fallVolumePath = Path();
 
   void paint(Canvas canvas, Size size, double max, double slideOffset,
-      {int? selectedIndex, bool showInfo = true}) {
+      {int? selectedIndex, bool showInfo = true, double? top}) {
     if (klineData.isEmpty) return;
     riseRectPaint.color = _style.riseColor;
     fallRectPaint.color = _style.fallColor;
@@ -69,8 +69,9 @@ class VolPainter {
     List showSubIndicators = controller.showSubIndicators;
     int subIndicatorCount = showSubIndicators.length;
 
-    double originBtm = size.height;
-    if (subIndicatorCount == 2 &&
+    double originBtm = top == null ? size.height : top + height;
+    if (top == null &&
+        subIndicatorCount == 2 &&
         showSubIndicators.first == IndicatorType.vol) {
       originBtm = size.height -
           controller.subIndicatorHeight -

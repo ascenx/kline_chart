@@ -111,11 +111,15 @@ class KLineIndicatorInfoPainter extends CustomPainter {
     final subIndicatorCount = showSubIndicators.length;
     final indicatorH = _config.subIndicatorHeight;
     final indicatorSpacing = _config.indicatorSpacing;
+    final timeAxisHeight = _config.showTimeAxis
+        ? _config.timeAxisHeight.clamp(0.0, size.height).toDouble()
+        : 0.0;
 
     for (var idx = subIndicatorCount - 1; idx >= 0; --idx) {
       final type = showSubIndicators[idx];
       final orderIdx = subIndicatorCount - idx;
       final subTop = size.height -
+          timeAxisHeight -
           orderIdx * (indicatorH + indicatorSpacing) +
           indicatorSpacing;
 
@@ -199,6 +203,8 @@ class _IndicatorInfoConfig {
   final double klineTop;
   final double itemCount;
   final double spacing;
+  final bool showTimeAxis;
+  final double timeAxisHeight;
   final KLineNumberFormatter? volumeFormatter;
   final KLineIndicatorFormatter? indicatorFormatter;
 
@@ -222,6 +228,8 @@ class _IndicatorInfoConfig {
     required this.klineTop,
     required this.itemCount,
     required this.spacing,
+    required this.showTimeAxis,
+    required this.timeAxisHeight,
     required this.volumeFormatter,
     required this.indicatorFormatter,
   });
@@ -247,6 +255,8 @@ class _IndicatorInfoConfig {
       klineTop: controller.klineMargin.top,
       itemCount: controller.itemCount,
       spacing: controller.spacing,
+      showTimeAxis: controller.showTimeAxis,
+      timeAxisHeight: controller.timeAxisHeight,
       volumeFormatter: controller.volumeFormatter,
       indicatorFormatter: controller.indicatorFormatter,
     );
@@ -275,6 +285,8 @@ class _IndicatorInfoConfig {
             other.klineTop == klineTop &&
             other.itemCount == itemCount &&
             other.spacing == spacing &&
+            other.showTimeAxis == showTimeAxis &&
+            other.timeAxisHeight == timeAxisHeight &&
             other.volumeFormatter == volumeFormatter &&
             other.indicatorFormatter == indicatorFormatter;
   }
@@ -301,6 +313,8 @@ class _IndicatorInfoConfig {
       klineTop,
       itemCount,
       spacing,
+      showTimeAxis,
+      timeAxisHeight,
       volumeFormatter,
       indicatorFormatter,
     ]);

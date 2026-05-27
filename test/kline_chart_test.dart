@@ -968,6 +968,104 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
+    test('keeps volume bars above the reserved time axis area', () async {
+      KLineController.shared.itemCount = 1;
+      KLineController.shared.spacing = 0;
+      KLineController.shared.showMainIndicators = [];
+      KLineController.shared.showSubIndicators = [IndicatorType.vol];
+      KLineController.shared.indicatorSpacing = 0;
+      KLineController.shared.indicatorInfoHeight = 0;
+      KLineController.shared.subIndicatorHeight = 50;
+      KLineController.shared.showTimeAxis = true;
+      KLineController.shared.timeAxisHeight = 20;
+      KLineController.shared.chartStyle = const KLineChartStyle(
+        gridLineColor: Color(0x00000000),
+        rulerTextStyle: TextStyle(color: Color(0x00000000)),
+        highLowLineColor: Color(0x00000000),
+        highLowTextStyle: TextStyle(color: Color(0x00000000)),
+        currentPriceLineColor: Color(0x00000000),
+        currentPriceBackgroundColor: Color(0x00000000),
+        currentPriceTextStyle: TextStyle(color: Color(0x00000000)),
+      );
+      KLineController.shared.candleStyle = const KLineCandleStyle(
+        riseColor: Color(0x00000000),
+        fallColor: Color(0x00000000),
+        riseWickColor: Color(0x00000000),
+        fallWickColor: Color(0x00000000),
+      );
+      KLineController.shared.volumeStyle = const KLineVolumeStyle(
+        riseColor: Color(0xff22cc88),
+        fallColor: Color(0xffdd4455),
+      );
+
+      final data = [
+        KLineData(
+          open: 10,
+          high: 11,
+          low: 9,
+          close: 10.5,
+          volume: 1,
+          time: 0,
+        )
+      ];
+      final bytes = await _paintToBytes(
+        const Size(100, 100),
+        (canvas, size) => KLinePainter(data, 0).paint(canvas, size),
+      );
+
+      expect(_pixelAt(bytes, 50, 35, 100), const Color(0xff22cc88));
+      expect(_pixelAt(bytes, 50, 90, 100), const Color(0x00000000));
+    });
+
+    test('positions sub indicator info above the reserved time axis area',
+        () async {
+      KLineController.shared.itemCount = 10;
+      KLineController.shared.spacing = 0;
+      KLineController.shared.showMainIndicators = [];
+      KLineController.shared.showSubIndicators = [IndicatorType.vol];
+      KLineController.shared.indicatorSpacing = 0;
+      KLineController.shared.subIndicatorHeight = 50;
+      KLineController.shared.showTimeAxis = true;
+      KLineController.shared.timeAxisHeight = 20;
+      KLineController.shared.indicatorColors = const [
+        Color(0xffff0000),
+        Color(0xffff0000),
+        Color(0xffff0000),
+      ];
+      KLineController.shared.volumeFormatter = (_) => 'V';
+      final data = _buildKLineData(20);
+
+      final bytes = await _paintToBytes(
+        const Size(100, 100),
+        (canvas, size) =>
+            KLineIndicatorInfoPainter(data, 0).paint(canvas, size),
+      );
+      final firstRedY = _firstColorLikeY(
+        bytes,
+        width: 100,
+        xStart: 0,
+        xEnd: 100,
+        yStart: 0,
+        yEnd: 100,
+        matches: _isMostlyRed,
+      );
+
+      expect(
+        _containsColorLike(
+          bytes,
+          width: 100,
+          xStart: 0,
+          xEnd: 100,
+          yStart: 28,
+          yEnd: 48,
+          matches: _isMostlyRed,
+        ),
+        isTrue,
+      );
+      expect(firstRedY, isNotNull);
+      expect(firstRedY!, lessThan(50));
+    });
+
     testWidgets(
         'initializes at the latest candle when trailing blank is disabled',
         (tester) async {
@@ -2077,6 +2175,19 @@ void main() {
       expect(newPainter.shouldRepaint(oldPainter), isTrue);
     });
 
+    test('repaints the indicator info overlay when time axis layout changes',
+        () {
+      final data = _buildKLineData(20);
+      KLineController.shared.showTimeAxis = false;
+      final oldPainter = KLineIndicatorInfoPainter(data, 10);
+
+      KLineController.shared.showTimeAxis = true;
+      KLineController.shared.timeAxisHeight = 20;
+      final newPainter = KLineIndicatorInfoPainter(data, 10);
+
+      expect(newPainter.shouldRepaint(oldPainter), isTrue);
+    });
+
     test('repaints the indicator info overlay when periods change', () {
       final data = _buildKLineData(20);
       KLineController.shared.showSubIndicators = [IndicatorType.rsi];
@@ -2165,6 +2276,48 @@ Color _pixelAt(ByteData data, int x, int y, int width) {
     data.getUint8(offset + 1),
     data.getUint8(offset + 2),
   );
+}
+
+bool _containsColorLike(
+  ByteData data, {
+  required int width,
+  required int xStart,
+  required int xEnd,
+  required int yStart,
+  required int yEnd,
+  required bool Function(Color color) matches,
+}) {
+  for (var y = yStart; y < yEnd; y += 1) {
+    for (var x = xStart; x < xEnd; x += 1) {
+      if (matches(_pixelAt(data, x, y, width))) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+int? _firstColorLikeY(
+  ByteData data, {
+  required int width,
+  required int xStart,
+  required int xEnd,
+  required int yStart,
+  required int yEnd,
+  required bool Function(Color color) matches,
+}) {
+  for (var y = yStart; y < yEnd; y += 1) {
+    for (var x = xStart; x < xEnd; x += 1) {
+      if (matches(_pixelAt(data, x, y, width))) {
+        return y;
+      }
+    }
+  }
+  return null;
+}
+
+bool _isMostlyRed(Color color) {
+  return color.a > 0.1 && color.r > 0.6 && color.g < 0.25 && color.b < 0.25;
 }
 
 Future<ByteData> _paintToBytes(

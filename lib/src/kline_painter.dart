@@ -558,7 +558,8 @@ class KLinePainter extends CustomPainter {
       if (type == IndicatorType.vol) {
         VolPainter(klineData, beginIdx,
                 controller: controller, indicatorDataCache: _indicatorDataCache)
-            .paint(canvas, size, maxVolume, slideOffset, showInfo: false);
+            .paint(canvas, size, maxVolume, slideOffset,
+                showInfo: false, top: subTop);
       } else if (type == IndicatorType.macd) {
         _macdPainter.paintData(
             canvas,
