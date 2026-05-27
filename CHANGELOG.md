@@ -1,3 +1,10 @@
+## 1.0.2
+
+- Add adaptive price axis ticks with configurable maximum tick count and minimum label spacing.
+- Add an optional bottom time axis with automatic label granularity and custom time formatting.
+- Export `KLineTimeFormatter` and `KLineTimeLabelGranularity` from the public package API.
+- Add example controls and documentation for the optional time axis and axis configuration.
+
 ## 1.0.1
 
 - Add instance-based controllers with `KLineView(controller: ...)` while keeping `KLineController.shared` as the default legacy entry point.

@@ -30,7 +30,7 @@
 
 ```yaml
 dependencies:
-  kline_chart: ^1.0.1
+  kline_chart: ^1.0.2
 ```
 
 导入主包：
