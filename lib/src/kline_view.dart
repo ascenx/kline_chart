@@ -323,7 +323,15 @@ class _KLineViewState extends State<KLineView> {
         child: LayoutBuilder(builder: (ctx, constraints) {
           double containerW = constraints.maxWidth;
           double containerH = constraints.maxHeight;
+          final previousViewportWidth = _viewportWidth;
           _viewportWidth = containerW;
+
+          if (previousViewportWidth > 0 &&
+              (previousViewportWidth - containerW).abs() >=
+                  _scrollOffsetTolerance &&
+              _beginIdx >= 0) {
+            _syncScrollOffset(_beginIdx, controller.itemCount);
+          }
 
           double itemCount = controller.itemCount;
           double itemW =

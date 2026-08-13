@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:kline_chart/kline_chart.dart';
 import 'demo_data.dart';
 import 'multi_controller_demo_page.dart';
+import 'orientation_demo_page.dart';
 
 void main() {
   runApp(const MyApp());
@@ -127,71 +128,109 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
+  Widget _buildDemoNavigation(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      child: Wrap(
+        key: const Key('demo_navigation_wrap'),
+        alignment: WrapAlignment.end,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 20,
+        runSpacing: 8,
+        children: [
+          _buildDemoLink(
+            key: const Key('orientation_demo_button'),
+            label: 'Orientation Demo',
+            icon: Icons.screen_rotation,
+            onTap: () {
+              Navigator.of(context).push(MaterialPageRoute(
+                builder: (context) => const OrientationDemoPage(),
+              ));
+            },
+          ),
+          _buildDemoLink(
+            key: const Key('multi_controller_demo_button'),
+            label: 'Multi Controller Demo',
+            icon: Icons.chevron_right,
+            onTap: () {
+              Navigator.of(context).push(MaterialPageRoute(
+                builder: (context) => const MultiControllerDemoPage(),
+              ));
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDemoLink({
+    required Key key,
+    required String label,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      key: key,
+      onTap: onTap,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Flexible(
+            child: Text(
+              label,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 14, color: Colors.blue),
+            ),
+          ),
+          const SizedBox(width: 4),
+          Icon(icon, size: 18, color: Colors.blue),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildIndicatorSection(String title, bool isMain) {
+    final indicators = IndicatorType.values.where((element) {
+      return isMain
+          ? element.isMain
+          : !element.isMain && element != IndicatorType.maVol;
+    });
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      child: Wrap(
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 4,
+        runSpacing: 8,
+        children: [
+          Text(title),
+          ...indicators.map((e) {
+            return buildIndicator(e.name, e.isMain, clickIndicator);
+          }),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: AppBar(
           title: Text(widget.title),
         ),
-        body: Center(
-            child: Column(
-          children: [
-            Container(
-              alignment: Alignment.centerRight,
-              height: 48,
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: InkWell(
-                key: const Key('multi_controller_demo_button'),
-                onTap: () {
-                  Navigator.of(context).push(MaterialPageRoute(
-                    builder: (context) => const MultiControllerDemoPage(),
-                  ));
-                },
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Multi Controller Demo',
-                      style: TextStyle(fontSize: 14, color: Colors.blue),
-                    ),
-                    SizedBox(width: 4),
-                    Icon(
-                      Icons.chevron_right,
-                      size: 20,
-                      color: Colors.blue,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            Container(
-                height: 50,
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Row(children: [
-                  const Text("Main Indicator"),
-                  ...IndicatorType.values
-                      .where((element) => element.isMain)
-                      .map((e) {
-                    return buildIndicator(e.name, e.isMain, clickIndicator);
-                  })
-                ])),
-            Container(
-                height: 50,
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Row(children: [
-                  const Text("Sub Indicator"),
-                  ...IndicatorType.values
-                      .where((element) =>
-                          !element.isMain && element != IndicatorType.maVol)
-                      .map((e) {
-                    return buildIndicator(e.name, e.isMain, clickIndicator);
-                  })
-                ])),
-            Container(
-                alignment: Alignment.centerLeft,
-                height: 50,
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Row(
+        body: SingleChildScrollView(
+          key: const Key('home_scroll_view'),
+          child: Column(
+            children: [
+              _buildDemoNavigation(context),
+              _buildIndicatorSection('Main Indicator', true),
+              _buildIndicatorSection('Sub Indicator', false),
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                child: Wrap(
+                  spacing: 16,
+                  runSpacing: 8,
                   children: [
                     _buildToggle(
                       label: 'Time',
@@ -218,16 +257,21 @@ class _MyHomePageState extends State<MyHomePage> {
                       }),
                     ),
                   ],
-                )),
-            Container(
-                width: MediaQuery.of(context).size.width,
+                ),
+              ),
+              Container(
+                width: double.infinity,
                 height: 400,
                 decoration: const BoxDecoration(
-                    border: Border.symmetric(
-                        horizontal: BorderSide(color: Colors.black))),
-                child: KLineView())
-          ],
-        )) // This trailing comma makes auto-formatting nicer for build methods.
+                  border: Border.symmetric(
+                    horizontal: BorderSide(color: Colors.black),
+                  ),
+                ),
+                child: KLineView(),
+              ),
+            ],
+          ),
+        ) // This trailing comma makes auto-formatting nicer for build methods.
         );
   }
 }

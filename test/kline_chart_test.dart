@@ -1107,6 +1107,48 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
+    testWidgets('keeps the visible candle range stable when width changes',
+        (tester) async {
+      final controller = KLineController()
+        ..data = _buildKLineData(40)
+        ..itemCount = 10
+        ..trailingBlankItemCount = 0
+        ..maxTrailingBlankItemCount = 0
+        ..showMainIndicators = []
+        ..showSubIndicators = [];
+      var chartWidth = 300.0;
+      late StateSetter updateHost;
+
+      await tester.pumpWidget(MaterialApp(
+        home: StatefulBuilder(
+          builder: (context, setState) {
+            updateHost = setState;
+            return Center(
+              child: SizedBox(
+                width: chartWidth,
+                height: 240,
+                child: KLineView(controller: controller),
+              ),
+            );
+          },
+        ),
+      ));
+      await tester.pump();
+
+      final scrollController = tester
+          .widget<SingleChildScrollView>(find.byType(SingleChildScrollView))
+          .controller!;
+      scrollController.jumpTo(300);
+      await tester.pump();
+
+      updateHost(() => chartWidth = 600);
+      await tester.pump();
+      await tester.pump();
+
+      expect(scrollController.offset, closeTo(600, 0.000001));
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('renders short data with trailing blank defaults',
         (tester) async {
       KLineController.shared.data = _buildKLineData(3);
