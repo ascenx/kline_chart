@@ -15,11 +15,23 @@ class KLineData {
       this.time = 0});
 
   KLineData.fromJson(dynamic json) {
-    open = json['open'] ?? 0.0;
-    high = json['high'] ?? 0.0;
-    low = json['low'] ?? 0.0;
-    close = json['close'] ?? 0.0;
-    volume = json['volume'] ?? 0.0;
-    time = json['time'] ?? 0;
+    open = _asDouble(json['open']);
+    high = _asDouble(json['high']);
+    low = _asDouble(json['low']);
+    close = _asDouble(json['close']);
+    volume = _asDouble(json['volume']);
+    time = _asInt(json['time']);
+  }
+
+  static double _asDouble(dynamic value) {
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? 0.0;
+    return 0.0;
+  }
+
+  static int _asInt(dynamic value) {
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value) ?? 0;
+    return 0;
   }
 }

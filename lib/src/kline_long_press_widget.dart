@@ -75,7 +75,7 @@ class KLineLongPressPainter extends CustomPainter {
 
   final _linePaint = Paint()
     ..style = PaintingStyle.stroke
-    ..color = Colors.blueGrey.withValues(alpha: 0.8);
+    ..color = Colors.blueGrey.withAlpha(204);
 
   // draw kline
 

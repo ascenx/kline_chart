@@ -36,6 +36,8 @@ class KLinePainter extends CustomPainter {
   final double _timeAxisMinLabelSpacing;
   final int _priceAxisMaxTickCount;
   final double _priceAxisMinTickSpacing;
+  final int _dataVersion;
+  final _KLinePainterConfig _config;
   final KLineIndicatorDataCache _indicatorDataCache;
 
   KLinePainter(this.klineData, this.beginIdx,
@@ -66,6 +68,9 @@ class KLinePainter extends CustomPainter {
             (controller ?? KLineController.shared).priceAxisMaxTickCount,
         _priceAxisMinTickSpacing =
             (controller ?? KLineController.shared).priceAxisMinTickSpacing,
+        _dataVersion = (controller ?? KLineController.shared).dataVersion,
+        _config = _KLinePainterConfig.fromController(
+            controller ?? KLineController.shared),
         _indicatorDataCache = indicatorDataCache ??
             KLineIndicatorDataCache(klineData, beginIdx,
                 controller: controller ?? KLineController.shared);
@@ -98,7 +103,7 @@ class KLinePainter extends CustomPainter {
 
   final _rulerPaint = Paint()
     ..style = PaintingStyle.stroke
-    ..color = Colors.blueGrey.withValues(alpha: 0.2);
+    ..color = Colors.blueGrey.withAlpha(51);
 
   final _currentPricePaint = Paint()
     ..style = PaintingStyle.stroke
@@ -187,7 +192,7 @@ class KLinePainter extends CustomPainter {
       Offset(0, mainHeight),
       <Color>[
         _chartStyle.timeLineFillColor,
-        _chartStyle.timeLineFillColor.withValues(alpha: 0.0),
+        _chartStyle.timeLineFillColor.withAlpha(0),
       ],
     );
 
@@ -877,8 +882,10 @@ class KLinePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant KLinePainter oldDelegate) {
-    return oldDelegate.klineData != klineData ||
+    return oldDelegate._dataVersion != _dataVersion ||
+        oldDelegate.klineData != klineData ||
         oldDelegate.beginIdx != beginIdx ||
+        oldDelegate._config != _config ||
         oldDelegate._chartStyle != _chartStyle ||
         oldDelegate._candleStyle != _candleStyle ||
         oldDelegate._volumeStyle != _volumeStyle ||
@@ -897,4 +904,120 @@ class KLinePainter extends CustomPainter {
         !listEquals(oldDelegate._overlays, _overlays) ||
         oldDelegate._sarColor != _sarColor;
   }
+}
+
+class _KLinePainterConfig {
+  final List<IndicatorType> showMainIndicators;
+  final List<IndicatorType> showSubIndicators;
+  final List<int> volMaPeriods;
+  final List<int> macdPeriods;
+  final List<int> kdjPeriods;
+  final List<int> rsiPeriods;
+  final List<int> wrPeriods;
+  final int bollPeriod;
+  final int bollBandwidth;
+  final double sarStart;
+  final double sarIncrement;
+  final double sarMax;
+  final double itemCount;
+  final double spacing;
+  final EdgeInsets klineMargin;
+  final double mainIndicatorInfoMargin;
+  final double indicatorSpacing;
+  final double subIndicatorHeight;
+  final double indicatorInfoHeight;
+
+  const _KLinePainterConfig({
+    required this.showMainIndicators,
+    required this.showSubIndicators,
+    required this.volMaPeriods,
+    required this.macdPeriods,
+    required this.kdjPeriods,
+    required this.rsiPeriods,
+    required this.wrPeriods,
+    required this.bollPeriod,
+    required this.bollBandwidth,
+    required this.sarStart,
+    required this.sarIncrement,
+    required this.sarMax,
+    required this.itemCount,
+    required this.spacing,
+    required this.klineMargin,
+    required this.mainIndicatorInfoMargin,
+    required this.indicatorSpacing,
+    required this.subIndicatorHeight,
+    required this.indicatorInfoHeight,
+  });
+
+  factory _KLinePainterConfig.fromController(KLineController controller) {
+    return _KLinePainterConfig(
+      showMainIndicators: List<IndicatorType>.of(controller.showMainIndicators),
+      showSubIndicators: List<IndicatorType>.of(controller.showSubIndicators),
+      volMaPeriods: List<int>.of(controller.volMaPeriods),
+      macdPeriods: List<int>.of(controller.macdPeriods),
+      kdjPeriods: List<int>.of(controller.kdjPeriods),
+      rsiPeriods: List<int>.of(controller.rsiPeriods),
+      wrPeriods: List<int>.of(controller.wrPeriods),
+      bollPeriod: controller.bollPeriod,
+      bollBandwidth: controller.bollBandwidth,
+      sarStart: controller.sarStart,
+      sarIncrement: controller.sarIncrement,
+      sarMax: controller.sarMax,
+      itemCount: controller.itemCount,
+      spacing: controller.spacing,
+      klineMargin: controller.klineMargin,
+      mainIndicatorInfoMargin: controller.mainIndicatorInfoMargin,
+      indicatorSpacing: controller.indicatorSpacing,
+      subIndicatorHeight: controller.subIndicatorHeight,
+      indicatorInfoHeight: controller.indicatorInfoHeight,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is _KLinePainterConfig &&
+            listEquals(other.showMainIndicators, showMainIndicators) &&
+            listEquals(other.showSubIndicators, showSubIndicators) &&
+            listEquals(other.volMaPeriods, volMaPeriods) &&
+            listEquals(other.macdPeriods, macdPeriods) &&
+            listEquals(other.kdjPeriods, kdjPeriods) &&
+            listEquals(other.rsiPeriods, rsiPeriods) &&
+            listEquals(other.wrPeriods, wrPeriods) &&
+            other.bollPeriod == bollPeriod &&
+            other.bollBandwidth == bollBandwidth &&
+            other.sarStart == sarStart &&
+            other.sarIncrement == sarIncrement &&
+            other.sarMax == sarMax &&
+            other.itemCount == itemCount &&
+            other.spacing == spacing &&
+            other.klineMargin == klineMargin &&
+            other.mainIndicatorInfoMargin == mainIndicatorInfoMargin &&
+            other.indicatorSpacing == indicatorSpacing &&
+            other.subIndicatorHeight == subIndicatorHeight &&
+            other.indicatorInfoHeight == indicatorInfoHeight;
+  }
+
+  @override
+  int get hashCode => Object.hashAll([
+        Object.hashAll(showMainIndicators),
+        Object.hashAll(showSubIndicators),
+        Object.hashAll(volMaPeriods),
+        Object.hashAll(macdPeriods),
+        Object.hashAll(kdjPeriods),
+        Object.hashAll(rsiPeriods),
+        Object.hashAll(wrPeriods),
+        bollPeriod,
+        bollBandwidth,
+        sarStart,
+        sarIncrement,
+        sarMax,
+        itemCount,
+        spacing,
+        klineMargin,
+        mainIndicatorInfoMargin,
+        indicatorSpacing,
+        subIndicatorHeight,
+        indicatorInfoHeight,
+      ]);
 }

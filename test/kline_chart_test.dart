@@ -128,6 +128,44 @@ void main() {
     });
   });
 
+  group('KLineData.fromJson', () {
+    test('normalizes integer JSON numbers to the declared field types', () {
+      final data = KLineData.fromJson({
+        'open': 1,
+        'high': 2,
+        'low': 0,
+        'close': 1,
+        'volume': 3,
+        'time': 4,
+      });
+
+      expect(data.open, 1.0);
+      expect(data.high, 2.0);
+      expect(data.low, 0.0);
+      expect(data.close, 1.0);
+      expect(data.volume, 3.0);
+      expect(data.time, 4);
+    });
+
+    test('parses numeric strings and falls back for invalid values', () {
+      final data = KLineData.fromJson({
+        'open': '1.25',
+        'high': '2.5',
+        'low': 'invalid',
+        'close': '1.75',
+        'volume': '30.5',
+        'time': '1710000000000',
+      });
+
+      expect(data.open, 1.25);
+      expect(data.high, 2.5);
+      expect(data.low, 0.0);
+      expect(data.close, 1.75);
+      expect(data.volume, 30.5);
+      expect(data.time, 1710000000000);
+    });
+  });
+
   group('KLineAxis', () {
     test('generates nice price ticks within the visible price range', () {
       final ticks = KLineAxis.priceTicks(
@@ -351,6 +389,30 @@ void main() {
       expect(controller.lastDataChange?.type, KLineDataChangeType.append);
     });
 
+    test('owns a growable copy of data supplied by the caller', () {
+      final source = <KLineData>[KLineData(close: 1)];
+      final controller = KLineController()..setData(source);
+
+      source.clear();
+      controller.append(KLineData(close: 2));
+
+      expect(controller.data.map((item) => item.close), [1, 2]);
+    });
+
+    test('accepts unmodifiable input and exposes read-only data', () {
+      final controller = KLineController()
+        ..setData(List<KLineData>.unmodifiable([KLineData(close: 1)]));
+
+      controller.prependHistory([KLineData(close: 0)]);
+      controller.append(KLineData(close: 2));
+
+      expect(controller.data.map((item) => item.close), [0, 1, 2]);
+      expect(
+        () => controller.data.add(KLineData(close: 3)),
+        throwsUnsupportedError,
+      );
+    });
+
     test('overlay updates notify listeners without changing data version', () {
       final controller = KLineController();
       controller.setData(_buildKLineData(2));
@@ -571,6 +633,106 @@ void main() {
     test('repaints when begin index changes', () {
       final oldPainter = KLinePainter(const [], 10);
       final newPainter = KLinePainter(const [], 11);
+
+      expect(newPainter.shouldRepaint(oldPainter), isTrue);
+    });
+
+    test('repaints when updateLast changes the data version', () {
+      final controller = KLineController()
+        ..showMainIndicators = []
+        ..showSubIndicators = []
+        ..setData(_buildKLineData(2));
+      final oldPainter = KLinePainter(
+        controller.data,
+        0,
+        controller: controller,
+      );
+
+      controller.updateLast(KLineData(
+        open: 100,
+        high: 101,
+        low: 99,
+        close: 100,
+        volume: 10,
+        time: 1,
+      ));
+      final newPainter = KLinePainter(
+        controller.data,
+        0,
+        controller: controller,
+      );
+
+      expect(newPainter.shouldRepaint(oldPainter), isTrue);
+    });
+
+    test('repaints when indicator selection changes', () {
+      final controller = KLineController()
+        ..showMainIndicators = [IndicatorType.ma]
+        ..showSubIndicators = [IndicatorType.vol];
+      final oldPainter = KLinePainter(const [], 0, controller: controller);
+
+      controller
+        ..showMainIndicators = [IndicatorType.boll]
+        ..showSubIndicators = [IndicatorType.macd];
+      final newPainter = KLinePainter(const [], 0, controller: controller);
+
+      expect(newPainter.shouldRepaint(oldPainter), isTrue);
+    });
+
+    test('repaints when indicator periods change', () {
+      final controller = KLineController()..macdPeriods = [12, 26, 9];
+      final oldPainter = KLinePainter(const [], 0, controller: controller);
+
+      controller.macdPeriods = [5, 10, 4];
+      final newPainter = KLinePainter(const [], 0, controller: controller);
+
+      expect(newPainter.shouldRepaint(oldPainter), isTrue);
+    });
+
+    test('repaints for every chart geometry field used by the painter', () {
+      final changes = <String, void Function(KLineController)>{
+        'itemCount': (controller) => controller.itemCount = 20,
+        'spacing': (controller) => controller.spacing = 4,
+        'klineMargin': (controller) =>
+            controller.klineMargin = const EdgeInsets.all(3),
+        'mainIndicatorInfoMargin': (controller) =>
+            controller.mainIndicatorInfoMargin = 8,
+        'indicatorSpacing': (controller) => controller.indicatorSpacing = 12,
+        'subIndicatorHeight': (controller) =>
+            controller.subIndicatorHeight = 80,
+        'indicatorInfoHeight': (controller) =>
+            controller.indicatorInfoHeight = 20,
+      };
+
+      for (final change in changes.entries) {
+        final controller = KLineController();
+        final oldPainter = KLinePainter(const [], 0, controller: controller);
+
+        change.value(controller);
+        final newPainter = KLinePainter(const [], 0, controller: controller);
+
+        expect(
+          newPainter.shouldRepaint(oldPainter),
+          isTrue,
+          reason: change.key,
+        );
+      }
+    });
+
+    test('repaints indicator info when the data version changes', () {
+      final controller = KLineController()..setData(_buildKLineData(2));
+      final oldPainter = KLineIndicatorInfoPainter(
+        controller.data,
+        0,
+        controller: controller,
+      );
+
+      controller.updateLast(KLineData(close: 100, time: 1));
+      final newPainter = KLineIndicatorInfoPainter(
+        controller.data,
+        0,
+        controller: controller,
+      );
 
       expect(newPainter.shouldRepaint(oldPainter), isTrue);
     });
@@ -1450,7 +1612,7 @@ void main() {
       expect(result.minValue, 2);
     });
 
-    test('calculates BOLL values and bounds with existing sentinel behavior',
+    test('calculates BOLL values without including warm-up sentinels in bounds',
         () {
       KLineController.shared.itemCount = 5;
       final data = _buildKLineDataFromCloses([1, 2, 3, 4, 5]);
@@ -1472,7 +1634,22 @@ void main() {
       expect(dn[3], closeTo(1.367006838144548, 0.000001));
       expect(dn[4], closeTo(2.367006838144548, 0.000001));
       expect(result.maxValue, closeTo(5.6329931618554525, 0.000001));
-      expect(result.minValue, -1);
+      expect(result.minValue, closeTo(0.367006838144548, 0.000001));
+    });
+
+    test('keeps neutral BOLL bounds while every value is warming up', () {
+      KLineController.shared.itemCount = 2;
+      final data = _buildKLineDataFromCloses([1, 2]);
+
+      final result = IndicatorDataHandler.boll(data, 3, 2, 0);
+
+      expect(result.data, [
+        [-1, -1],
+        [-1, -1],
+        [-1, -1],
+      ]);
+      expect(result.maxValue, 0);
+      expect(result.minValue, 0);
     });
 
     test('calculates KDJ values without changing the visible result', () {
@@ -1484,14 +1661,43 @@ void main() {
       final d = result.data[1];
       final j = result.data[2];
 
-      expect(k[0], closeTo(83.33333333333333, 0.000001));
-      expect(d[0], closeTo(61.11111111111111, 0.000001));
-      expect(j[0], closeTo(127.77777777777777, 0.000001));
-      expect(k.last, closeTo(69.87654320987653, 0.000001));
-      expect(d.last, closeTo(68.72427983539094, 0.000001));
-      expect(j.last, closeTo(72.18106995884772, 0.000001));
-      expect(result.maxValue, closeTo(127.77777777777777, 0.000001));
-      expect(result.minValue, closeTo(61.11111111111111, 0.000001));
+      expect(k, hasLength(5));
+      expect(k.first, closeTo(50, 0.000001));
+      expect(d.first, closeTo(50, 0.000001));
+      expect(j.first, closeTo(50, 0.000001));
+      expect(k[1], closeTo(58.333333333333336, 0.000001));
+      expect(d[1], closeTo(52.77777777777778, 0.000001));
+      expect(j[1], closeTo(69.44444444444446, 0.000001));
+      expect(k.last, closeTo(62.46913580246913, 0.000001));
+      expect(d.last, closeTo(58.8477366255144, 0.000001));
+      expect(j.last, closeTo(69.71193415637859, 0.000001));
+      expect(result.maxValue, closeTo(77.03703703703704, 0.000001));
+      expect(result.minValue, closeTo(50, 0.000001));
+    });
+
+    test('uses a neutral KDJ RSV after a non-flat trend becomes flat', () {
+      KLineController.shared.itemCount = 5;
+      final data = [
+        KLineData(open: 1, high: 2, low: 1, close: 2),
+        KLineData(open: 2, high: 3, low: 1, close: 3),
+        KLineData(open: 2, high: 2, low: 2, close: 2),
+        KLineData(open: 2, high: 2, low: 2, close: 2),
+        KLineData(open: 2, high: 2, low: 2, close: 2),
+      ];
+
+      final result = IndicatorDataHandler.kdj(data, [3, 3, 3], 0);
+
+      expect(result.data, hasLength(3));
+      expect(result.data.every((values) => values.length == 5), isTrue);
+      expect(
+        result.data.expand((values) => values).every((value) => value.isFinite),
+        isTrue,
+      );
+      expect(result.data[0].last, closeTo(64.81481481481481, 0.000001));
+      expect(result.data[1].last, closeTo(79.62962962962963, 0.000001));
+      expect(result.data[2].last, closeTo(35.185185185185176, 0.000001));
+      expect(result.maxValue, 100);
+      expect(result.minValue, closeTo(35.185185185185176, 0.000001));
     });
 
     test('calculates WR values without changing the visible result', () {
@@ -1503,10 +1709,27 @@ void main() {
       expect(result.data.single[0], closeTo(50, 0.000001));
       expect(result.data.single[1], closeTo(25, 0.000001));
       expect(result.data.single[2], closeTo(50, 0.000001));
-      expect(result.data.single[3], closeTo(16.666666666666664, 0.000001));
+      expect(result.data.single[3], closeTo(20, 0.000001));
       expect(result.data.single[4], closeTo(40, 0.000001));
       expect(result.maxValue, closeTo(50, 0.000001));
-      expect(result.minValue, closeTo(16.666666666666664, 0.000001));
+      expect(result.minValue, closeTo(20, 0.000001));
+    });
+
+    test('keeps OBV values stable for overlapping candles while scrolling', () {
+      final controller = KLineController()..itemCount = 2;
+      final data = List.generate(
+        5,
+        (index) => KLineData(close: index + 1.0, volume: 10),
+      );
+
+      final fromOne =
+          IndicatorDataHandler.obv(data, 1, controller: controller).data.single;
+      final fromTwo =
+          IndicatorDataHandler.obv(data, 2, controller: controller).data.single;
+
+      expect(fromOne, [0, 10, 20]);
+      expect(fromTwo, [10, 20, 30]);
+      expect(fromOne.sublist(1), fromTwo.sublist(0, 2));
     });
 
     test('line indicators include one leading value during fractional scroll',
@@ -2359,7 +2582,16 @@ int? _firstColorLikeY(
 }
 
 bool _isMostlyRed(Color color) {
-  return color.a > 0.1 && color.r > 0.6 && color.g < 0.25 && color.b < 0.25;
+  // The integer channels are the Color API available in Flutter 3.0.
+  // ignore: deprecated_member_use
+  final alpha = color.alpha;
+  // ignore: deprecated_member_use
+  final red = color.red;
+  // ignore: deprecated_member_use
+  final green = color.green;
+  // ignore: deprecated_member_use
+  final blue = color.blue;
+  return alpha > 25 && red > 153 && green < 64 && blue < 64;
 }
 
 Future<ByteData> _paintToBytes(

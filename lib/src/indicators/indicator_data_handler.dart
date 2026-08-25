@@ -143,6 +143,8 @@ class IndicatorDataHandler {
     List<double> upList = [];
     List<double> mbList = [];
     List<double> dnList = [];
+    double? maxValue;
+    double? minValue;
 
     final visibleStart = _visibleDataStart(beginIdx);
     final visibleEnd = _visibleEnd(klineData, beginIdx, controller: controller);
@@ -174,19 +176,19 @@ class IndicatorDataHandler {
       upList.add(up);
       mbList.add(mb);
       dnList.add(dn);
+      maxValue = maxValue == null ? up : max(maxValue, up);
+      minValue = minValue == null ? dn : min(minValue, dn);
     }
 
     if (dnList.isEmpty) {
       return IndicatorResult.empty;
     }
 
-    double maxValue = 0.0, minValue = dnList.first;
-    for (int i = 0; i < upList.length; ++i) {
-      maxValue = max(upList[i], maxValue);
-      minValue = min(dnList[i], minValue);
-    }
-
-    return IndicatorResult([mbList, upList, dnList], maxValue, minValue);
+    return IndicatorResult(
+      [mbList, upList, dnList],
+      maxValue ?? 0.0,
+      minValue ?? 0.0,
+    );
   }
 
   static IndicatorResult sar(List<KLineData> klineData, double beginIdx,
@@ -378,7 +380,9 @@ class IndicatorDataHandler {
   static IndicatorResult kdj(
       List<KLineData> klineData, List<int> periods, double beginIdx,
       {KLineController? controller}) {
-    if (klineData.isEmpty || periods.length != 3) {
+    if (klineData.isEmpty ||
+        periods.length != 3 ||
+        periods.any((period) => period <= 0)) {
       return IndicatorResult.empty;
     }
     int period1 = periods[0];
@@ -390,35 +394,15 @@ class IndicatorDataHandler {
     List<double> jValues = [];
     double maxValue = 0.0;
     double minValue = 0.0;
+    bool hasVisibleValue = false;
 
-    double itemCount = (controller ?? KLineController.shared).itemCount;
-
-    double lastK = 0.0, lastD = 0.0;
-    final visibleStart = _visibleStart(beginIdx);
+    double lastK = 50.0, lastD = 50.0;
     final dataStart = _visibleDataStart(beginIdx);
     final visibleEnd = _visibleEnd(klineData, beginIdx, controller: controller);
     for (int i = 0; i < visibleEnd; i++) {
       KLineData data = klineData[i];
-      if (i == 0) {
-        double rsv = (data.close - data.low) / (data.high - data.low) * 100;
-        lastK = lastD = rsv;
-        if (dataStart == 0 && visibleStart > 0) {
-          kValues.add(lastK);
-          dValues.add(lastD);
-          jValues.add(lastK);
-          maxValue = lastK;
-          minValue = lastK;
-        }
-        continue;
-      }
-
-      int startIdx = i >= period1 ? i - period1 + 1 : 0;
-      int length = i >= period1 ? period1 : i;
-
-      int endIdx = startIdx + length;
-      if (startIdx == endIdx) {
-        throw StateError('No element');
-      }
+      final startIdx = max(0, i - period1 + 1);
+      final endIdx = i + 1;
       double hn = klineData[startIdx].high;
       double ln = klineData[startIdx].low;
       for (int j = startIdx + 1; j < endIdx; j++) {
@@ -426,33 +410,22 @@ class IndicatorDataHandler {
         hn = hn > subData.high ? hn : subData.high;
         ln = ln < subData.low ? ln : subData.low;
       }
-      if (ln == hn) {
-        return IndicatorResult.empty;
-      }
-
-      double rsv = (data.close - ln) / (hn - ln) * 100;
-      double kValue = (lastK * (period2 - 1) + rsv) / period2;
-      double dValue = (lastD * (period3 - 1) + kValue) / period3;
+      final rsv = ln == hn ? 50.0 : (data.close - ln) / (hn - ln) * 100;
+      final kValue = i == 0 ? rsv : (lastK * (period2 - 1) + rsv) / period2;
+      final dValue =
+          i == 0 ? kValue : (lastD * (period3 - 1) + kValue) / period3;
       double jValue = 3 * kValue - 2 * dValue;
 
-      if (i >= dataStart && i < (beginIdx + itemCount).ceil()) {
-        if (kValue > maxValue || maxValue == 0.0) {
-          maxValue = kValue;
-        }
-        if (dValue > maxValue) {
-          maxValue = dValue;
-        }
-        if (jValue > maxValue) {
-          maxValue = jValue;
-        }
-        if (kValue < minValue || minValue == 0.0) {
-          minValue = kValue;
-        }
-        if (dValue < minValue) {
-          minValue = dValue;
-        }
-        if (jValue < minValue) {
-          minValue = jValue;
+      if (i >= dataStart) {
+        final valueMax = max(kValue, max(dValue, jValue));
+        final valueMin = min(kValue, min(dValue, jValue));
+        if (!hasVisibleValue) {
+          maxValue = valueMax;
+          minValue = valueMin;
+          hasVisibleValue = true;
+        } else {
+          maxValue = max(maxValue, valueMax);
+          minValue = min(minValue, valueMin);
         }
 
         kValues.add(kValue);
@@ -582,17 +555,21 @@ class IndicatorDataHandler {
       return IndicatorResult.empty;
     }
     List<List<double>> dataList = [];
-    double max = 0.0, min = 0.0;
+    double maxValue = 0.0, minValue = 0.0;
     int dataStart = _visibleDataStart(beginIdx);
     for (var idx = 0; idx < periods.length; ++idx) {
       int period = periods[idx];
+      if (period <= 0) {
+        dataList.add([]);
+        continue;
+      }
       List<double> wrList = [];
 
       int endIndex = _visibleEnd(klineData, beginIdx, controller: controller);
       for (int i = dataStart; i < endIndex; ++i) {
         final dataIndex = i;
         if (dataIndex >= klineData.length) break;
-        final startIndex = i < period ? 0 : i - period;
+        final startIndex = max(0, i - period + 1);
         final endIndex = i + 1;
         if (startIndex == endIndex) {
           throw StateError('No element');
@@ -613,55 +590,55 @@ class IndicatorDataHandler {
             : (highest - klineData[dataIndex < 0 ? 0 : dataIndex].close) /
                 (highest - lowest) *
                 100;
-        if (wr < min || min == 0.0) {
-          min = wr;
+        if (wr < minValue || minValue == 0.0) {
+          minValue = wr;
         }
-        if (wr > max || max == 0.0) {
-          max = wr;
+        if (wr > maxValue || maxValue == 0.0) {
+          maxValue = wr;
         }
         wrList.add(wr);
       }
       dataList.add(wrList);
     }
-    return IndicatorResult(dataList, max, min);
+    return IndicatorResult(dataList, maxValue, minValue);
   }
 
   static IndicatorResult obv(List<KLineData> klineData, double beginIdx,
       {KLineController? controller}) {
+    if (klineData.isEmpty) {
+      return IndicatorResult.empty;
+    }
     List<double> obvValues = [];
     double obv = 0.0;
-    double prevClose = 0.0;
 
-    double itemCount = (controller ?? KLineController.shared).itemCount;
     int dataStart = _visibleDataStart(beginIdx);
-    double endIndex = beginIdx + itemCount;
-    endIndex = endIndex < klineData.length
-        ? endIndex
-        : klineData.length.roundToDouble();
+    int endIndex = _visibleEnd(klineData, beginIdx, controller: controller);
 
     double maxValue = 0.0;
     double minValue = 0.0;
+    bool hasVisibleValue = false;
     for (var i = 0; i < endIndex; i++) {
       KLineData data = klineData[i];
 
-      if (i > beginIdx) {
+      if (i > 0) {
+        final prevClose = klineData[i - 1].close;
         if (data.close > prevClose) {
           obv += data.volume;
         } else if (data.close < prevClose) {
           obv -= data.volume;
         }
-        if (obv > maxValue || maxValue == 0.0) {
-          maxValue = obv;
-        }
-        if (obv < minValue || minValue == 0.0) {
-          minValue = obv;
-        }
       }
 
-      prevClose = data.close;
-
-      if (i >= dataStart && i < (beginIdx + itemCount).ceil()) {
+      if (i >= dataStart) {
         obvValues.add(obv);
+        if (!hasVisibleValue) {
+          maxValue = obv;
+          minValue = obv;
+          hasVisibleValue = true;
+        } else {
+          maxValue = max(maxValue, obv);
+          minValue = min(minValue, obv);
+        }
       }
     }
 

@@ -31,6 +31,8 @@ KLine Chart 是一个轻量级 Flutter K 线图组件，用于构建交易、行
 
 ## 安装
 
+最低要求为 Dart 2.17 和 Flutter 3.0。
+
 在 Flutter 项目的 `pubspec.yaml` 中添加依赖：
 
 ```yaml
@@ -126,6 +128,8 @@ controller.append(nextPeriodCandle);
 controller.prependHistory(olderCandles);
 controller.clearData();
 ```
+
+`controller.data` 是只读视图。请使用上述生命周期方法修改图表数据，确保监听器和指标缓存能够正确更新。
 
 当用户滚动到左侧边缘附近时，可以通过 `onLoadMore` 加载更早的历史 K 线。加载完成后调用 `prependHistory`，图表会保持当前可见 K 线不跳动。
 

@@ -26,7 +26,8 @@
 
 ## 安装和导入
 
-在 Flutter 项目的 `pubspec.yaml` 中添加依赖：
+最低要求为 Dart 2.17 和 Flutter 3.0。在 Flutter 项目的 `pubspec.yaml`
+中添加依赖：
 
 ```yaml
 dependencies:
@@ -849,7 +850,7 @@ controller.volumeFormatter = (value) {
 
 | 属性或方法 | 类型 | 默认值 | 用途 |
 | --- | --- | --- | --- |
-| `data` | `List<KLineData>` | `[]` | 图表数据 |
+| `data` | `List<KLineData>` | `[]` | 只读图表数据视图；通过生命周期方法修改 |
 | `setData(data)` | `void` | - | 替换全部图表数据并通知视图刷新 |
 | `updateLast(data)` | `void` | - | 替换最新一根 K 线；无数据时自动追加 |
 | `append(data)` | `void` | - | 追加新周期 K 线；如果当前已对齐最新 K 线，会继续跟随最新位置 |

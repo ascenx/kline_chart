@@ -173,7 +173,8 @@ class KLineOverlayPainter {
     final opacity = _clampDouble(overlay.opacity ?? style.zoneOpacity, 0, 1);
     final paint = Paint()
       ..style = PaintingStyle.fill
-      ..color = (overlay.color ?? style.zoneColor).withValues(alpha: opacity)
+      ..color =
+          (overlay.color ?? style.zoneColor).withAlpha((opacity * 255).round())
       ..isAntiAlias = false;
     canvas.drawRect(Rect.fromLTRB(0, zoneTop, size.width, zoneBottom), paint);
 

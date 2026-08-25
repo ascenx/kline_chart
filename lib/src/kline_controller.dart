@@ -1,4 +1,6 @@
+import 'dart:collection';
 import 'dart:math';
+
 import 'package:flutter/material.dart';
 import './kline_axis.dart';
 import './kline_chart_style.dart';
@@ -91,9 +93,15 @@ class KLineDataChange {
 
 class KLineController extends ChangeNotifier {
   List<KLineData> _data = [];
+  late UnmodifiableListView<KLineData> _dataView =
+      UnmodifiableListView<KLineData>(_data);
   List<KLineOverlay> _overlays = const [];
 
-  List<KLineData> get data => _data;
+  /// Read-only view of the current chart data.
+  ///
+  /// Use [setData], [updateLast], [append], [prependHistory], or [clearData]
+  /// to mutate data and notify chart listeners.
+  List<KLineData> get data => _dataView;
 
   set data(List<KLineData> value) => setData(value, resetView: false);
 
@@ -115,7 +123,7 @@ class KLineController extends ChangeNotifier {
 
   void setData(List<KLineData> value, {bool resetView = true}) {
     final previousLength = _data.length;
-    _data = value;
+    _replaceData(value);
     _notifyDataChanged(KLineDataChange(
       type: KLineDataChangeType.setData,
       previousLength: previousLength,
@@ -165,7 +173,7 @@ class KLineController extends ChangeNotifier {
 
   void clearData() {
     final previousLength = _data.length;
-    _data = [];
+    _replaceData(const []);
     _notifyDataChanged(KLineDataChange(
       type: KLineDataChangeType.clear,
       previousLength: previousLength,
@@ -177,6 +185,11 @@ class KLineController extends ChangeNotifier {
     _lastDataChange = change;
     _dataVersion += 1;
     notifyListeners();
+  }
+
+  void _replaceData(Iterable<KLineData> value) {
+    _data = List<KLineData>.of(value);
+    _dataView = UnmodifiableListView<KLineData>(_data);
   }
 
   void setOverlays(List<KLineOverlay> value) {
@@ -274,7 +287,7 @@ class KLineController extends ChangeNotifier {
   EdgeInsets infoWidgetPadding = const EdgeInsets.all(4);
   double infoWidgetBorderRadius = 4;
   Border infoWidgetBorder =
-      Border.all(color: Colors.blueGrey.withValues(alpha: 0.5), width: 0.5);
+      Border.all(color: Colors.blueGrey.withAlpha(128), width: 0.5);
 
   var longPressOffset = LongPressOffset(Offset.zero);
 

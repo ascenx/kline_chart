@@ -1,5 +1,8 @@
 import 'dart:convert';
 
+// Flutter 3.0's services library does not re-export Color.
+// ignore: unnecessary_import
+import 'package:flutter/material.dart' show Color;
 import 'package:flutter/services.dart';
 import 'package:kline_chart/kline_chart.dart';
 

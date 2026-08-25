@@ -31,6 +31,8 @@ It is designed for crypto, stock, and trading-related apps that need a customiza
 
 ## Installation
 
+Requires Dart 2.17 or later and Flutter 3.0 or later.
+
 Add the package to your Flutter project:
 
 ```yaml
@@ -132,6 +134,9 @@ controller.append(nextPeriodCandle);
 controller.prependHistory(olderCandles);
 controller.clearData();
 ```
+
+`controller.data` is a read-only view. Use the lifecycle methods above to
+change chart data so listeners and indicator caches are updated correctly.
 
 Use `onLoadMore` to request older candles when the user scrolls near the left
 edge. After loading, call `prependHistory`; the chart keeps the current visible

@@ -35,7 +35,7 @@ class MACDPainter {
   final Paint _zeroLinePaint = Paint()
     ..style = PaintingStyle.stroke
     ..strokeWidth = 0.5
-    ..color = Colors.blueGrey.withValues(alpha: 0.3);
+    ..color = Colors.blueGrey.withAlpha(77);
   final Path _positiveHistogramPath = Path();
   final Path _negativeHistogramPath = Path();
   final Path _positiveStrokeHistogramPath = Path();

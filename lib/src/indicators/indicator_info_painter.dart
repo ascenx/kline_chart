@@ -14,6 +14,7 @@ class KLineIndicatorInfoPainter extends CustomPainter {
   final double beginIdx;
   final KLineController controller;
   final _IndicatorInfoConfig _config;
+  final int _dataVersion;
   final KLineIndicatorDataCache _indicatorDataCache;
 
   KLineIndicatorInfoPainter(this.klineData, this.beginIdx,
@@ -22,6 +23,7 @@ class KLineIndicatorInfoPainter extends CustomPainter {
       : controller = controller ?? KLineController.shared,
         _config = _IndicatorInfoConfig.fromController(
             controller ?? KLineController.shared),
+        _dataVersion = (controller ?? KLineController.shared).dataVersion,
         _indicatorDataCache = indicatorDataCache ??
             KLineIndicatorDataCache(klineData, beginIdx,
                 controller: controller ?? KLineController.shared),
@@ -177,7 +179,8 @@ class KLineIndicatorInfoPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant KLineIndicatorInfoPainter oldDelegate) {
-    return oldDelegate.klineData != klineData ||
+    return oldDelegate._dataVersion != _dataVersion ||
+        oldDelegate.klineData != klineData ||
         oldDelegate.beginIdx != beginIdx ||
         oldDelegate._config != _config;
   }

@@ -1,3 +1,13 @@
+## Unreleased
+
+- Restore genuine Dart 2.17 / Flutter 3.0 compatibility by removing newer
+  framework APIs and declaring the minimum Flutter SDK explicitly.
+- Fix real-time data and runtime indicator configuration repaint invalidation.
+- Correct OBV, WR, and KDJ window calculations and flat-range KDJ handling.
+- Exclude BOLL warm-up sentinels from visible bounds.
+- Normalize integer and string values in `KLineData.fromJson`.
+- Copy controller input data and expose chart data through a read-only view.
+
 ## 1.0.2
 
 - Add adaptive price axis ticks with configurable maximum tick count and minimum label spacing.

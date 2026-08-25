@@ -28,7 +28,8 @@ This document covers the full usage surface of `kline_chart`: data setup, chart 
 
 ## Installation And Import
 
-Add the package to your Flutter project's `pubspec.yaml`:
+The package requires Dart 2.17 or later and Flutter 3.0 or later. Add it to
+your Flutter project's `pubspec.yaml`:
 
 ```yaml
 dependencies:
@@ -867,7 +868,7 @@ controller.volumeFormatter = (value) {
 
 | Property Or Method | Type | Default | Purpose |
 | --- | --- | --- | --- |
-| `data` | `List<KLineData>` | `[]` | Chart data |
+| `data` | `List<KLineData>` | `[]` | Read-only chart data view; mutate through the lifecycle methods |
 | `setData(data)` | `void` | - | Replaces all chart data and notifies the view |
 | `updateLast(data)` | `void` | - | Replaces the latest candle, or appends when data is empty |
 | `append(data)` | `void` | - | Appends a newly closed candle and follows the latest candle when already aligned to the end |

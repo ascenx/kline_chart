@@ -120,7 +120,7 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     final orientationRequests = <List<String>>[];
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+    tester.binding.defaultBinaryMessenger
         .setMockMethodCallHandler(SystemChannels.platform, (call) async {
       if (call.method == 'SystemChrome.setPreferredOrientations') {
         orientationRequests.add(List<String>.from(call.arguments as List));
@@ -128,7 +128,7 @@ void main() {
       return null;
     });
     addTearDown(() {
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      tester.binding.defaultBinaryMessenger
           .setMockMethodCallHandler(SystemChannels.platform, null);
     });
 
@@ -170,7 +170,7 @@ void main() {
       const ['DeviceOrientation.portraitUp'],
     );
 
-    await tester.tap(find.byKey(const Key('orientation_demo_back_button')));
+    await tester.binding.handlePopRoute();
     await tester.pump();
 
     expect(
@@ -192,7 +192,7 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     final orientationRequests = <List<String>>[];
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+    tester.binding.defaultBinaryMessenger
         .setMockMethodCallHandler(SystemChannels.platform, (call) async {
       if (call.method == 'SystemChrome.setPreferredOrientations') {
         orientationRequests.add(List<String>.from(call.arguments as List));
@@ -200,7 +200,7 @@ void main() {
       return null;
     });
     addTearDown(() {
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      tester.binding.defaultBinaryMessenger
           .setMockMethodCallHandler(SystemChannels.platform, null);
     });
 
@@ -248,10 +248,10 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(800, 900));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+    tester.binding.defaultBinaryMessenger
         .setMockMethodCallHandler(SystemChannels.platform, (_) async => null);
     addTearDown(() {
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      tester.binding.defaultBinaryMessenger
           .setMockMethodCallHandler(SystemChannels.platform, null);
     });
 

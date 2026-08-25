@@ -66,13 +66,18 @@ class _OrientationDemoPageState extends State<OrientationDemoPage> {
     Navigator.of(context).pop();
   }
 
+  Future<bool> _handleWillPop() async {
+    await _switchToPortrait();
+    return true;
+  }
+
   Widget _buildSwitchButton({
     required Key key,
     required IconData icon,
     required String label,
     required VoidCallback onPressed,
   }) {
-    return FilledButton.icon(
+    return ElevatedButton.icon(
       key: key,
       onPressed: onPressed,
       icon: Icon(icon),
@@ -155,12 +160,9 @@ class _OrientationDemoPageState extends State<OrientationDemoPage> {
 
   @override
   Widget build(BuildContext context) {
-    return PopScope(
-      onPopInvokedWithResult: (didPop, _) {
-        if (didPop) {
-          _switchToPortrait();
-        }
-      },
+    // ignore: deprecated_member_use
+    return WillPopScope(
+      onWillPop: _handleWillPop,
       child: Scaffold(
         appBar: AppBar(
           leading: IconButton(
