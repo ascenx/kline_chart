@@ -1,6 +1,6 @@
 name: kline_chart
 description: Flutter native candlestick chart without dependencies, high performance, smooth scrolling, supports multiple indicators
-version: 1.0.2
+version: 1.0.3
 
 homepage: https://github.com/ascenx/kline_chart
 repository: https://github.com/ascenx/kline_chart

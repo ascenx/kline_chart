@@ -1,4 +1,4 @@
-## Unreleased
+## 1.0.3
 
 - Restore genuine Dart 2.17 / Flutter 3.0 compatibility by removing newer
   framework APIs and declaring the minimum Flutter SDK explicitly.
